@@ -51,6 +51,12 @@ cal.i = -4.6 - mean(plrm2$d15N_lc) * cal.s
 # Calibrate all
 d$d15N_cal = d$d15N_lc * cal.s + cal.i
 
+# %N calibration
+n.s = mean(plrm2$Amount) * 0.0952 / mean(plrm2$`Area All N`)
+
+# Calibrate all
+d$Npct = d$`Area All N` * n.s / d$Amount # In one file this field name is `Area All`
+
 # Re-extract all RMs
 plrm1 = d[d$`Identifier 1` == "UU-CN-3",]
 plrm2 = d[d$`Identifier 1` == "UU-CN-2",]
@@ -63,8 +69,8 @@ data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
                           mean(slrm$d15N_cal)),
            "d15N_cal.sd" = c(sd(plrm1$d15N_cal), sd(plrm2$d15N_cal),
                           sd(slrm$d15N_cal)),
-           "N%_known" = c(NA, 9.52, 5.95),
-           "N%_meas" = rep(NA),
-           "N%_meas.sd" = rep(NA))
+           "Npct_known" = c(NA, 9.52, 5.95),
+           "Npct_meas" = c(mean(plrm1$Npct), mean(plrm2$Npct), mean(slrm$Npct)) * 100,
+           "Npct_meas.sd" = c(sd(plrm1$Npct), sd(plrm2$Npct), sd(slrm$Npct)) * 100)
 
 #### Need screening criteria for peak area relative to SLRM, N yield
