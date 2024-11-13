@@ -13,5 +13,5 @@ d.cor = lin.cor(d, lin.seg)
 d.cal = calibrate(d.cor)
 
 # QC report
-d.qc = report(d.cal)
+d.qc = QC(d.cal)
 
