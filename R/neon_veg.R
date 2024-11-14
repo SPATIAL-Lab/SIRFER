@@ -1,17 +1,7 @@
 source("R/vegFuncs.R")
 
-# Prep data
-d = prepVeg("data/241001_24-252.2.xls")
+process.veg("240930_24-251-252.xls")
+process.veg("241001_24-252.2.xls")
+process.veg("24-252.2-rerun.xls")
 
-# Linearity fit
-lin.seg = lin.fit(d)
-
-# Linearity correction
-d.cor = lin.cor(d, lin.seg)
-
-# Calibration
-d.cal = calibrate(d.cor)
-
-# QC report
-d.qc = QC(d.cal)
-
+veg = read.csv("db/veg.csv")

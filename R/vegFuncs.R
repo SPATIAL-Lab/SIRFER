@@ -1,3 +1,25 @@
+process.veg = function(fn){
+  
+  # Prep data
+  d = prepVeg(file.path("data", fn))
+  
+  # Linearity fit
+  lin.seg = lin.fit(d)
+  
+  # Linearity correction
+  d.cor = lin.cor(d, lin.seg)
+  
+  # Calibration
+  d.cal = calibrate(d.cor)
+  
+  # QC report
+  d.qc = QC(d.cal)
+  
+  # Write results
+  write.veg(d.qc, fn)
+  
+}
+
 prepVeg = function(fn){
   library(readxl)
   
@@ -9,14 +31,30 @@ prepVeg = function(fn){
   d.N = d.N[d.N$`Peak Nr` == 2,]
   d.C = d.C[d.C$`Peak Nr` == 3,]
   
+  # Check column names
+  names(d.N) = gsub("Area All", "AreaAllN", names(d.N))
+  names(d.N) = gsub("%", "PctN", names(d.N))
+  names(d.N) = gsub("/", "_", names(d.N))
+  names(d.N) = gsub("Start", "StartN", names(d.N))
+  names(d.N) = gsub("End", "EndN", names(d.N))
+
+  names(d.C) = gsub("Area All", "AreaAllC", names(d.C))
+  names(d.C) = gsub("%", "PctC", names(d.C))
+  names(d.C) = gsub("/", "_", names(d.C))
+  names(d.C) = gsub("Start", "StartC", names(d.C))
+  names(d.C) = gsub("Width", "WidthC", names(d.C))
+  
   # Merge
   d = cbind(d.N, d.C[, 8:21])
   
+  # Remove WS from field names
+  names(d) = gsub(" ", "", names(d))
+
   # Drop blanks and conditioners
-  d = d[!(d$`Identifier 1` %in% c("blank tin", "COND")),]
+  d = d[!(d$Identifier1 %in% c("blank tin", "COND")),]
   
   # Add ln(Area)
-  d$ln_AreaN = log(d$`Area All N`)
+  d$ln_AreaN = log(d$AreaAllN)
   
   return(d)
 }
@@ -25,17 +63,17 @@ lin.fit = function(d){
   library(segmented)
   
   # Parse out slrms
-  slrm = d[d$`Identifier 1` == "SPINACH",]
+  slrm = d[d$Identifier1 == "SPINACH",]
   
   # Plot linearity
-  plot(slrm$ln_AreaN, slrm$`d 15N/14N`)
+  plot(slrm$ln_AreaN, slrm$d15N_14N)
   
   # Segmented regression
-  lin = lm(`d 15N/14N` ~ ln_AreaN, data = slrm)
+  lin = lm(d15N_14N ~ ln_AreaN, data = slrm)
   lin.seg = segmented(lin, seg.Z = ~ ln_AreaN, psi = 4)
   
   # Add fit to plot, report r^2
-  abline(lin.seg)
+  abline(lin.seg$coefficients[1:2])
   summary(lin.seg)$r.squared
   
   return(lin.seg)
@@ -46,11 +84,11 @@ lin.cor = function(d, lin.seg){
   d$d15N_lc = rep(0)
   for(i in seq_along(d$Line)){
     if(d$ln_AreaN[i] < lin.seg$psi[2]){
-      d$d15N_lc[i] = d$`d 15N/14N`[i] + 
+      d$d15N_lc[i] = d$d15N_14N[i] + 
         (lin.seg$psi[2] - d$ln_AreaN[i]) * lin.seg$coefficients[2]
     }
     else{
-      d$d15N_lc[i] = d$`d 15N/14N`[i]
+      d$d15N_lc[i] = d$d15N_14N[i]
     }
   }
   
@@ -59,42 +97,35 @@ lin.cor = function(d, lin.seg){
 
 calibrate = function(d){
   # Extract PLRMs
-  plrm1 = d[d$`Identifier 1` == "UU-CN-3",]
-  plrm2 = d[d$`Identifier 1` == "UU-CN-2",]
+  plrm1 = d[d$Identifier1 == "UU-CN-3",]
+  plrm2 = d[d$Identifier1 == "UU-CN-2",]
   
   # Calibration equations
   calN.s = (9.3 + 4.6) / (mean(plrm1$d15N_lc) - mean(plrm2$d15N_lc)) 
   calN.i = -4.6 - mean(plrm2$d15N_lc) * calN.s
-  calC.s = (-12.35 + 28.18) / (mean(plrm1$`d 13C/12C`) -
-                                 mean(plrm2$`d 13C/12C`))
-  calC.i = -28.18 - mean(plrm2$`d 13C/12C`) * calC.s
+  calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_12C) -
+                                 mean(plrm2$d13C_12C))
+  calC.i = -28.18 - mean(plrm2$d13C_12C) * calC.s
+
+  n.s = mean(plrm2$Amount) * 9.52 / mean(plrm2$AreaAllN)
+  c.s = mean(plrm2$Amount) * 40.81 / mean(plrm2$AreaAllC)
   
   # Calibrate all
   d$d15N_cal = d$d15N_lc * calN.s + calN.i
-  d$d13C_cal = d$`d 13C/12C` * calC.s + calC.i
-  
-  # Find N area column
-#  n.names = c("Area All N", "Area All")
-#  n.c = match(n.names[n.names %in% names(d)], names(d))
-  
-  # %N calibration
-#  n.s = mean(plrm2$Amount) * 0.0952 / mean(plrm2[, n.c])
-  n.s = mean(plrm2$Amount) * 9.52 / mean(plrm2$`Area All N`)
-  c.s = mean(plrm2$Amount) * 40.81 / mean(plrm2$`Area All`)
-  
-  # Calibrate all
-  d$Npct = d$`Area All N` * n.s / d$Amount
-  d$Cpct = d$`Area All` * c.s / d$Amount
+  d$d13C_cal = d$d13C_12C * calC.s + calC.i
+
+  d$Npct = d$AreaAllN * n.s / d$Amount
+  d$Cpct = d$AreaAllC * c.s / d$Amount
   
   return(d)
 }
 
 QC = function(d){
   # Extract all RMs
-  plrm1 = d[d$`Identifier 1` == "UU-CN-3",]
-  plrm2 = d[d$`Identifier 1` == "UU-CN-2",]
-  slrm = d[d$`Identifier 1` == "SPINACH",]
-  d = d[!(d$`Identifier 1` %in% c("UU-CN-3", "UU-CN-2", "SPINACH")),]
+  plrm1 = d[d$Identifier1 == "UU-CN-3",]
+  plrm2 = d[d$Identifier1 == "UU-CN-2",]
+  slrm = d[d$Identifier1 == "SPINACH",]
+  d = d[!(d$Identifier1 %in% c("UU-CN-3", "UU-CN-2", "SPINACH")),]
 
   d15N_known = c(9.3, -4.6, -0.4)  
   Npct_known = c(NA, 9.52, 5.95)
@@ -174,46 +205,101 @@ QC = function(d){
                    "Cpct_meas" = paste0(Cpct_meas, Cpct.flag),
                    "Cpct_meas.sd" = paste0(Cpct_meas.sd, Cpct_sd.flag)))
   
+  # Recombine w/ standards
+  d = rbind(d, plrm1, plrm2, slrm)
+  
   # Add QC flags back to d
   if(Npct_sd.flag[3] == "*" | Cpct_sd.flag[3] == "*"){
     d$cnPercentQF = rep(1)
-  } else{
+  }
+  else{
     d$cnPercentQF = rep(0)
   }
   
   if(d15N_sd.flag[3] == "*" | d13C_sd.flag[3] == "*"){
     d$cnIsotopeQF = rep(1)
-  } else{
+  }
+  else{
     d$cnIsotopeQF = rep(0)
   }
   
   if(Npct.flag[3] == "*" | Cpct.flag[3] == "*"){
     d$percentAccuracyQF = rep(1)
-  } else{
+  }
+  else{
     d$percentAccuracyQF = rep(0)
   }
   
   if(d15N.flag[3] == "*" | d13C.flag[3] == "*"){
     d$isotopeAccuracyQF = rep(1)
-  } else{
+  }
+  else{
     d$isotopeAccuracyQF = rep(0)
   }
   
-  # Sample QC - need distinct flag for low N yield
+  # Sample QC
   d$yieldQF = rep(0)
-  d$yieldQF[d$`Area All N` > max(slrm$`Area All N`) * 1.25 |
-      d$`Area All N` < min(slrm$`Area All N`) * 0.75 |
-        d$`Area All` > max(slrm$`Area All`) * 1.25 |
-        d$`Area All` < min(slrm$`Area All`) * 0.75] = 1
+  d$yieldQF[d$AreaAllN > max(slrm$AreaAllN) * 1.25 |
+      d$AreaAllN < min(slrm$AreaAllN) * 0.75 |
+        d$AreaAllC > max(slrm$AreaAllC) * 1.25 |
+        d$AreaAllC < min(slrm$AreaAllC) * 0.75] = 1
   d$yieldQF[d$Amount * d$Npct < 0.015] = 2
   
   if(sum(d$yieldQF == 2) > 0){
   cat("Small samples\n")
   cat(paste(d$Line[d$yieldQF == 2], 
-            d$`Identifier 1`[d$yieldQF == 2], "\n"))
+            d$Identifier1[d$yieldQF == 2], "\n"))
   }
-
+    
   return(d)
+}
+
+write.veg = function(d, fn){
+  if(!dir.exists("db")){
+    dir.create("db")
+  }
+  
+  d$DataFile = rep(fn)
+  
+  if(file.exists("db/veg.csv")){
+    # Read existing data
+    veg = read.csv("db/veg.csv")
+    
+    # Find and remove existing data for these analyses, if any
+    v.ui = paste0(veg$Identifier1, veg$TimeCode)
+    d.ui = paste0(d$Identifier1, d$TimeCode)
+
+    sup = veg[v.ui %in% d.ui, ]
+    veg = veg[!(v.ui %in% d.ui), ]
+    
+    # Append new data
+    veg = rbind(veg, d)
+    
+    # Write DB and superseded records
+    write.csv(veg, "db/veg.csv", row.names = FALSE)
+    if(nrow(sup) > 0){
+      if(!dir.exists("db/sup")){
+        dir.create("db/sup")
+      }
+      
+      fn = file.path("db", "sup", paste0(Sys.Date(), ".csv"))
+      for(i in 1:9){
+        if(file.exists(fn)){
+          fn = file.path("db", "sup", paste0(Sys.Date(), "_", i, ".csv"))
+        }
+      }
+      write.csv(sup, fn, row.names = FALSE)
+      cat(nrow(sup), "samples were superseded in the database.")
+    }
+  }
+  else{
+    veg = d
+    write.csv(veg, "db/veg.csv", row.names = FALSE)
+  }
+}
+
+read.veg = function(rid){
+  if()
 }
 
 # Read manifest - where to get these, how to identify?
