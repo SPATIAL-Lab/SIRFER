@@ -272,6 +272,11 @@ write.veg = function(d, fn){
     sup = veg[v.ui %in% d.ui, ]
     veg = veg[!(v.ui %in% d.ui), ]
     
+    #####
+    # ToDo - identify prev runs of sample and assign analysis number
+    # ToDo - identify if CO2 has been trapped, purge C data, flag
+    #####
+    
     # Append new data
     veg = rbind(veg, d)
     
@@ -298,10 +303,92 @@ write.veg = function(d, fn){
   }
 }
 
-read.veg = function(rid){
-  if()
+read.veg = function(fn, rm.incl = FALSE){
+  if(!inherits(fn, "character")){
+    stop("Must be one or more run file names")
+  }
+  
+  d = read.csv("db/veg.csv")
+  d = d[d$DataFile %in% fn,]
+  
+  if(!rm.incl){
+    d = d[!(d$Identifier1 %in% c("UU-CN-3", "UU-CN-2", "SPINACH")),]
+  }
+  
+  return(d)
 }
 
-# Read manifest - where to get these, how to identify?
-mf = list.files("data", "manifest")
-man = read.csv("data/manifest_for_D0620240710111247324.csv")
+report.veg = function(fn){
+  if(!inherits(fn, "character")){
+    stop("Must be a manifest file name")
+  }
+  
+  if(length(fn > 1)){
+    stop("Only one manifest can be reported at a time")
+  }
+  
+  # Read manifest
+  man = read.csv(file.path("data", fn))
+  veg = read.csv("db/veg.csv")
+  
+  # Samples for manifest
+  veg.sub = merge(man, veg, by.x = "SIRFER.ID", by.y = "Identifier1")
+  
+  if(!all(man$SIRFER.ID %in% veg.sub$SIRFER.ID)){
+    miss = man$SIRFER.ID[!(man$SIRFER.ID %in% veg.sub$SIRFER.ID)]
+    message(paste("Samples", miss, "not in database"))
+  }
+  
+  # RMs for the manifest
+  runs = unique(veg.sub$DataFile)
+  rm.sub = veg[veg$Identifier1 == "SPINACH",]
+  rm.sub = rm.sub[rm.sub$DataFile %in% runs,]
+  
+  # Sample reporting
+  veg.out = data.frame("analysisDate" = as.Date(veg.sub$TimeCode),
+                       "sampleID" = veg.sub$sampleID,
+                       "sampleCode" = veg.sub$sampleCode,
+                       "internalLabID" = veg.sub$SIRFER.ID,
+                       "runID" = gsub(".xls", "", veg.sub$DataFile),
+                       "acidTreatment" = rep(""),
+                       "co2Trapped" = rep("N"),
+                       "nitrogenPercent" = veg.sub$Npct,
+                       "carbonPercent" = veg.sub$Cpct,
+                       "CNratio" = veg.sub$Cpct / veg.sub$Npct,
+                       "d15N" = veg.sub$d15N_cal,
+                       "d13C" = veg.sub$d13C_cal,
+                       "analyticalRepNumber" = rep(1),
+                       "cnPercentQF" = veg.sub$cnPercentQF,
+                       "cnIsotopeQF" = veg.sub$cnIsotopeQF,
+                       "percentAccuracyQF" = veg.sub$percentAccuracyQF,
+                       "isotopeAccuracyQF" = veg.sub$isotopeAccuracyQF,
+                       "remarks" = rep(""),
+                       "testMethod" = rep("NEON_vegIso_SOP v.2"),
+                       "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
+                       "analyzedBy" = rep("schakraborty"),
+                       "reviewedBy" = rep("schakraborty"))
+
+  # QC reporting
+  ref.out = data.frame("analysisDate" = as.Date(rm.sub$TimeCode),
+                       "qaReferenceID" = rep("Spinach"),
+                       "internalLabID" = rep("Spinach"),
+                       "runID" = gsub(".xls", "", rm.sub$DataFile),
+                       "nitrogenPercent" = rm.sub$Npct,
+                       "carbonPercent" = rm.sub$Cpct,
+                       "CNratio" = rm.sub$Cpct / rm.sub$Npct,
+                       "d15N" = rm.sub$d15N_cal,
+                       "d13C" = rm.sub$d13C_cal,
+                       "analyticalRepNumber" = seq(nrow(rm.sub)),
+                       "cnPercentQF" = rm.sub$cnPercentQF,
+                       "cnIsotopeQF" = rm.sub$cnIsotopeQF,
+                       "percentAccuracyQF" = rm.sub$percentAccuracyQF,
+                       "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
+                       "remarks" = rep(""),
+                       "testMethod" = rep("NEON_vegIso_SOP v.2"),
+                       "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
+                       "analyzedBy" = rep("schakraborty"),
+                       "reviewedBy" = rep("schakraborty"))
+
+
+}
+
