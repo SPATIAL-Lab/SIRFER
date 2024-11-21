@@ -66,31 +66,40 @@ lin.fit = function(d){
   slrm = d[d$Identifier1 == "SPINACH",]
   
   # Plot linearity
-  plot(slrm$ln_AreaN, slrm$d15N_14N)
+  opar = par("mar")
+  par(mar = c(5, 5, 1, 1))
+  plot(slrm$ln_AreaN, slrm$d15N_14N,
+       xlab = "ln(AreaN)", ylab = expression("SPINACH  "*delta^15*"N"))
+  par(mar = opar)
   
   # Segmented regression
   lin = lm(d15N_14N ~ ln_AreaN, data = slrm)
-  lin.seg = segmented(lin, seg.Z = ~ ln_AreaN, psi = 4)
-  
+  lin.seg = segmented(lin, ~ ln_AreaN, psi = 4, 
+                      control = seg.control(alpha = c(0.25, 0.75)))
+
   # Add fit to plot, report r^2
-  abline(lin.seg$coefficients[1:2])
-  summary(lin.seg)$r.squared
+  plot(lin.seg, add = TRUE)  
+  cat("Breakpoint =", summary(lin.seg)$psi[2], "\n")
+  cat("R2 =", summary(lin.seg)$r.squared, "\n\n")
   
   return(lin.seg)
 }
 
 lin.cor = function(d, lin.seg){
   # Correct all data
-  d$d15N_lc = rep(0)
-  for(i in seq_along(d$Line)){
-    if(d$ln_AreaN[i] < lin.seg$psi[2]){
-      d$d15N_lc[i] = d$d15N_14N[i] + 
-        (lin.seg$psi[2] - d$ln_AreaN[i]) * lin.seg$coefficients[2]
-    }
-    else{
-      d$d15N_lc[i] = d$d15N_14N[i]
-    }
-  }
+  d15N_pred = predict(lin.seg, data.frame("ln_AreaN" = d$ln_AreaN))
+  
+  d$d15N_lc = d$d15N_14N - d15N_pred
+  
+#  for(i in seq_along(d$Line)){
+#    if(d$ln_AreaN[i] < lin.seg$psi[2]){
+#      d$d15N_lc[i] = d$d15N_14N[i] + 
+#        (lin.seg$psi[2] - d$ln_AreaN[i]) * lin.seg$coefficients[2]
+#    }
+#    else{
+#      d$d15N_lc[i] = d$d15N_14N[i]
+#    }
+#  }
   
   return(d)
 }
@@ -273,8 +282,8 @@ write.veg = function(d, fn){
     veg = veg[!(v.ui %in% d.ui), ]
     
     #####
-    # ToDo - identify prev runs of sample and assign analysis number
-    # ToDo - identify if CO2 has been trapped, purge C data, flag
+    # TODO - identify prev runs of sample and assign analysis number
+    # TODO - identify if CO2 has been trapped, purge C data, flag
     #####
     
     # Append new data
@@ -318,12 +327,15 @@ read.veg = function(fn, rm.incl = FALSE){
   return(d)
 }
 
+#####
+# TODO: Include option to report QF'd analyses
+#####
 report.veg = function(fn){
   if(!inherits(fn, "character")){
     stop("Must be a manifest file name")
   }
   
-  if(length(fn > 1)){
+  if(length(fn) > 1){
     stop("Only one manifest can be reported at a time")
   }
   
@@ -389,6 +401,17 @@ report.veg = function(fn){
                        "analyzedBy" = rep("schakraborty"),
                        "reviewedBy" = rep("schakraborty"))
 
+  # Save report files
+  dfn = file.path("out", substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4))
+  qfn = paste0(dfn, "_QA.csv")
+  dfn = paste0(dfn, ".csv")
+  write.csv(veg.out, dfn, row.names = FALSE)
+  write.csv(ref.out, qfn, row.names = FALSE)
 
+  # Summary
+  cat(nrow(man), "samples in manifest.\n")
+  cat(nrow(veg.out), "rows reported.\n")
+  qf = apply(veg.out[, 14:17] != 0, 1, any)
+  cat(sum(qf), "rows flagged for quality.\n")
 }
 

@@ -1,35 +1,26 @@
 source("R/vegFuncs.R")
 
-process.veg("240930_24-251-252.xls")
-process.veg("241001_24-252.2.xls")
-process.veg("24-252.2-rerun.xls")
+
+# Five files for processing
+process.veg("241118_24-333.1.xls") # noisy spinach d15N
+process.veg("241119_24-333.2.xls") # opposite d15N trend 
+process.veg("241117_24-251-252.1-RERUN.xls") # crap
+process.veg("241114_24-315.2-320.xls") #
+process.veg("241115_24-315.1-24-320.2.xls") #
+
+
+
+# Generate a report
+report.veg("manifest_for_D0620240710111247324-24-251.csv")
+report.veg("manifest_for_D1120240812104411337-24-315.csv")
+report.veg("manifest_for_D1320240807142613008-24-320.csv")
+
+
+report.veg("manifest_for_D0620240710111247324-24-251.csv")
+report.veg("manifest_for_D0620240710111247324-24-251.csv")
 
 
 
 
 
 
-d1 = read.veg("241001_24-252.2.xls")
-d2 = read.veg("24-252.2-rerun.xls")
-
-d1.ind = match(d1$Identifier1, d2$Identifier1)
-d1.ind = d1.ind[!is.na(d1.ind)]
-
-png("~/252.png", width = 9, height = 4, units = "in", res = 600)
-layout(matrix(c(1, 2), ncol = 2))
-par(mar = c(5, 5, 1, 1))
-plot(d1$d13C_cal[d1.ind], d2$d13C_cal, 
-     xlab = expression(delta^13*"C run 1"),
-     ylab = expression(delta^13*"C run 2"))
-abline(0, 1)
-mo = round(mean(d1$d13C_cal[d1.ind] - d2$d13C_cal), 2)
-legend("topleft", paste("Mean offset =", mo), bty = "n")
-
-plot(d1$d15N_cal[d1.ind], d2$d15N_cal, 
-     xlab = expression(delta^15*"N run 1"),
-     ylab = expression(delta^15*"N run 2"))
-abline(0, 1)
-mo = round(mean(d1$d15N_cal[d1.ind] - d2$d15N_cal), 2)
-legend("topleft", paste("Mean offset =", mo), bty = "n")
-
-dev.off()
