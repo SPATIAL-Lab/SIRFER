@@ -90,17 +90,7 @@ lin.cor = function(d, lin.seg){
   d15N_pred = predict(lin.seg, data.frame("ln_AreaN" = d$ln_AreaN))
   
   d$d15N_lc = d$d15N_14N - d15N_pred
-  
-#  for(i in seq_along(d$Line)){
-#    if(d$ln_AreaN[i] < lin.seg$psi[2]){
-#      d$d15N_lc[i] = d$d15N_14N[i] + 
-#        (lin.seg$psi[2] - d$ln_AreaN[i]) * lin.seg$coefficients[2]
-#    }
-#    else{
-#      d$d15N_lc[i] = d$d15N_14N[i]
-#    }
-#  }
-  
+
   return(d)
 }
 
@@ -355,6 +345,11 @@ report.veg = function(fn){
   runs = unique(veg.sub$DataFile)
   rm.sub = veg[veg$Identifier1 == "SPINACH",]
   rm.sub = rm.sub[rm.sub$DataFile %in% runs,]
+  rm.sub$rep = rep(0)
+  for(i in runs){
+    nr = sum(rm.sub$DataFile == i)
+    rm.sub$rep[rm.sub$DataFile == i] = 1:nr
+  }
   
   # Sample reporting
   veg.out = data.frame("analysisDate" = as.Date(veg.sub$TimeCode),
@@ -375,7 +370,7 @@ report.veg = function(fn){
                        "percentAccuracyQF" = veg.sub$percentAccuracyQF,
                        "isotopeAccuracyQF" = veg.sub$isotopeAccuracyQF,
                        "remarks" = rep(""),
-                       "testMethod" = rep("NEON_vegIso_SOP v.2"),
+                       "testMethod" = rep("NEON_vegIso_SOP v1.0"),
                        "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
                        "analyzedBy" = rep("schakraborty"),
                        "reviewedBy" = rep("schakraborty"))
@@ -383,14 +378,14 @@ report.veg = function(fn){
   # QC reporting
   ref.out = data.frame("analysisDate" = as.Date(rm.sub$TimeCode),
                        "qaReferenceID" = rep("Spinach"),
-                       "internalLabID" = rep("Spinach"),
+                       "internalLabID" = rep(NA),
                        "runID" = gsub(".xls", "", rm.sub$DataFile),
                        "nitrogenPercent" = rm.sub$Npct,
                        "carbonPercent" = rm.sub$Cpct,
                        "CNratio" = rm.sub$Cpct / rm.sub$Npct,
                        "d15N" = rm.sub$d15N_cal,
                        "d13C" = rm.sub$d13C_cal,
-                       "analyticalRepNumber" = seq(nrow(rm.sub)),
+                       "analyticalRepNumber" = rm.sub$rep,
                        "cnPercentQF" = rm.sub$cnPercentQF,
                        "cnIsotopeQF" = rm.sub$cnIsotopeQF,
                        "percentAccuracyQF" = rm.sub$percentAccuracyQF,
@@ -399,7 +394,7 @@ report.veg = function(fn){
                        "testMethod" = rep("NEON_vegIso_SOP v.2"),
                        "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
                        "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep("schakraborty"))
+                       "reviewedBy" = rep("gjbowen"))
 
   # Save report files
   dfn = file.path("out", substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4))
