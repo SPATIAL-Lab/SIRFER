@@ -370,9 +370,10 @@ report.veg = function(fn, flagged = FALSE){
   }
   
   # Sample reporting
-  veg.out = data.frame("analysisDate" = as.Date(veg.sub$TimeCode),
+  veg.out = data.frame("analysisDate" = format(as.Date(veg.sub$TimeCode), "%Y%m%d"),
                        "sampleID" = veg.sub$sampleID,
                        "sampleCode" = veg.sub$sampleCode,
+                       "sampleType" = rep("vegetation"),
                        "internalLabID" = veg.sub$SIRFER.ID,
                        "runID" = gsub(".xls", "", veg.sub$DataFile),
                        "acidTreatment" = rep(""),
@@ -394,7 +395,7 @@ report.veg = function(fn, flagged = FALSE){
                        "reviewedBy" = rep("gjbowen"))
 
   # QC reporting
-  ref.out = data.frame("analysisDate" = as.Date(rm.sub$TimeCode),
+  ref.out = data.frame("analysisDate" = format(as.Date(rm.sub$TimeCode), "%Y%m%d"),
                        "qaReferenceID" = rep("Spinach"),
                        "internalLabID" = rep(NA),
                        "runID" = gsub(".xls", "", rm.sub$DataFile),
@@ -409,7 +410,7 @@ report.veg = function(fn, flagged = FALSE){
                        "percentAccuracyQF" = rm.sub$percentAccuracyQF,
                        "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
                        "remarks" = rep(""),
-                       "testMethod" = rep("NEON_vegIso_SOP v.2"),
+                       "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
                        "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
                        "analyzedBy" = rep("schakraborty"),
                        "reviewedBy" = rep("gjbowen"))
