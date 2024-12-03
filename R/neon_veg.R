@@ -7,7 +7,7 @@ process.veg("241119_24-333.2.xls") # opposite d15N trend
 process.veg("241117_24-251-252.1-RERUN.xls") # crap
 process.veg("241114_24-315.2-320.xls") #
 process.veg("241115_24-315.1-24-320.2.xls") #
-
+process.veg("241121_24-252.2-RERUN-2.xls") # looks good
 
 
 # Generate a report

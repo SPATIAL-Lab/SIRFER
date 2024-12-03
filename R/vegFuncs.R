@@ -67,11 +67,11 @@ lin.fit = function(d){
   
   # Plot linearity
   opar = par("mar")
+  on.exit(par(mar = opar))
   par(mar = c(5, 5, 1, 1))
   plot(slrm$ln_AreaN, slrm$d15N_14N,
        xlab = "ln(AreaN)", ylab = expression("SPINACH  "*delta^15*"N"))
-  par(mar = opar)
-  
+
   # Segmented regression
   lin = lm(d15N_14N ~ ln_AreaN, data = slrm)
   lin.seg = segmented(lin, ~ ln_AreaN, psi = 4, 
@@ -125,6 +125,12 @@ QC = function(d){
   plrm2 = d[d$Identifier1 == "UU-CN-2",]
   slrm = d[d$Identifier1 == "SPINACH",]
   d = d[!(d$Identifier1 %in% c("UU-CN-3", "UU-CN-2", "SPINACH")),]
+  
+  opar = par("mar")
+  on.exit(par(mar = opar))
+  par(mar = c(5, 5, 1, 1))
+  plot(d$d13C_cal, d$d15N_cal, xlab = expression("Sample "*delta^13*"C"),
+       ylab = expression("Sample "*delta^15*"N"), pch = 21, bg = "grey60")
 
   d15N_known = c(9.3, -4.6, -0.4)  
   Npct_known = c(NA, 9.52, 5.95)
@@ -249,7 +255,7 @@ QC = function(d){
   cat(paste(d$Line[d$yieldQF == 2], 
             d$Identifier1[d$yieldQF == 2], "\n"))
   }
-    
+  
   return(d)
 }
 
@@ -320,13 +326,17 @@ read.veg = function(fn, rm.incl = FALSE){
 #####
 # TODO: Include option to report QF'd analyses
 #####
-report.veg = function(fn){
+report.veg = function(fn, flagged = FALSE){
   if(!inherits(fn, "character")){
-    stop("Must be a manifest file name")
+    stop("fn must be a manifest file name")
   }
   
   if(length(fn) > 1){
     stop("Only one manifest can be reported at a time")
+  }
+  
+  if(!inherits(flagged, "logical")){
+    stop("flagged must be TRUE/FALSE")
   }
   
   # Read manifest
@@ -335,6 +345,14 @@ report.veg = function(fn){
   
   # Samples for manifest
   veg.sub = merge(man, veg, by.x = "SIRFER.ID", by.y = "Identifier1")
+  
+  # Remove QC flagged if requested
+  if(!flagged){
+    qf = apply(veg.sub[, 58:61] != 0, 1, any)
+    il = nrow(veg.sub)
+    veg.sub = veg.sub[!qf, ]
+    cat(il - nrow(veg.sub), "rows removed based on QC flags.\n")
+  }
   
   if(!all(man$SIRFER.ID %in% veg.sub$SIRFER.ID)){
     miss = man$SIRFER.ID[!(man$SIRFER.ID %in% veg.sub$SIRFER.ID)]
@@ -370,10 +388,10 @@ report.veg = function(fn){
                        "percentAccuracyQF" = veg.sub$percentAccuracyQF,
                        "isotopeAccuracyQF" = veg.sub$isotopeAccuracyQF,
                        "remarks" = rep(""),
-                       "testMethod" = rep("NEON_vegIso_SOP v1.0"),
-                       "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
+                       "testMethod" = rep("NEON_vegIso_SOPv1.0"),
+                       "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
                        "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep("schakraborty"))
+                       "reviewedBy" = rep("gjbowen"))
 
   # QC reporting
   ref.out = data.frame("analysisDate" = as.Date(rm.sub$TimeCode),
@@ -392,7 +410,7 @@ report.veg = function(fn){
                        "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
                        "remarks" = rep(""),
                        "testMethod" = rep("NEON_vegIso_SOP v.2"),
-                       "instrument" = rep("Delta Advantage coupled with EA via Conflo III"),
+                       "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
                        "analyzedBy" = rep("schakraborty"),
                        "reviewedBy" = rep("gjbowen"))
 
