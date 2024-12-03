@@ -425,7 +425,7 @@ report.veg = function(fn, flagged = FALSE){
   # Summary
   cat(nrow(man), "samples in manifest.\n")
   cat(nrow(veg.out), "rows reported.\n")
-  qf = apply(veg.out[, 14:17] != 0, 1, any)
+  qf = apply(veg.out[, 15:18] != 0, 1, any)
   cat(sum(qf), "rows flagged for quality.\n")
 }
 
