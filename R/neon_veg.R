@@ -10,14 +10,14 @@ process.veg("241115_24-315.1-24-320.2.xls") #
 process.veg("241121_24-252.2-RERUN-2.xls") # looks good
 
 
-# Generate a report
-report.veg("manifest_for_D0620240710111247324-24-251.csv")
+# Reported
 report.veg("manifest_for_D1120240812104411337-24-315.csv")
+
+# Not yet reported
+report.veg("manifest_for_D0820240611135002668.csv")
+
+report.veg("manifest_for_D0620240710111247324-24-251.csv")
 report.veg("manifest_for_D1320240807142613008-24-320.csv")
-
-
-report.veg("manifest_for_D0620240710111247324-24-251.csv")
-report.veg("manifest_for_D0620240710111247324-24-251.csv")
 
 
 

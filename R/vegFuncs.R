@@ -3,14 +3,14 @@ process.veg = function(fn){
   # Prep data
   d = prepVeg(file.path("data", fn))
   
-  # Linearity fit
-  lin.seg = lin.fit(d)
+  # Correction fit
+  corr = corr.fit(d)
   
-  # Linearity correction
-  d.cor = lin.cor(d, lin.seg)
+  # Apply corrections
+  d.corr = corr.apply(d, corr)
   
   # Calibration
-  d.cal = calibrate(d.cor)
+  d.cal = calibrate(d.corr)
   
   # QC report
   d.qc = QC(d.cal)
@@ -59,12 +59,54 @@ prepVeg = function(fn){
   return(d)
 }
 
-lin.fit = function(d){
+corr.fit = function(d){
   library(segmented)
   
-  # Parse out slrms
+  # Parse out RMs
+  plrm1 = d[d$Identifier1 == "UU-CN-3",]
+  plrm2 = d[d$Identifier1 == "UU-CN-2",]
   slrm = d[d$Identifier1 == "SPINACH",]
+
+  # Check for drift using plrms
+  ## Carbon
+  drift.c1 = lm(d13C_12C ~ Line, plrm1)
+  drift.c2 = lm(d13C_12C ~ Line, plrm2)
+  slope.c1 = summary(drift.c1)$coeff[2, 1]
+  slope.c2 = summary(drift.c2)$coeff[2, 1]
+  if(summary(drift.c1)$adj.r.squared > 0.5 &
+     summary(drift.c2)$adj.r.squared > 0.5 &
+     identical(sign(slope.c1), sign(slope.c2))){
+    slope.c = mean(c(slope.c1, slope.c2))
+    cat("Carbon drift slope of", round(slope.c, 4), "applied.\n\n")
+    cat("PLRM1 SD before:", round(sd(plrm1$d13C_12C), 2), "and after:",
+        round(sd(drift.c1$residuals), 2), "\n")
+    cat("PLRM2 SD before:", round(sd(plrm2$d13C_12C), 2), "and after:",
+        round(sd(drift.c2$residuals), 2), "\n\n")
+  } else{
+    slope.c = 0
+  }
+
+  ## Nitrogen
+  drift.n1 = lm(d15N_14N ~ Line, plrm1)
+  drift.n2 = lm(d15N_14N ~ Line, plrm2)
+  slope.n1 = summary(drift.n1)$coeff[2, 1]
+  slope.n2 = summary(drift.n2)$coeff[2, 1]
+  if(summary(drift.n1)$adj.r.squared > 0.5 &
+     summary(drift.n2)$adj.r.squared > 0.5 &
+     identical(sign(slope.n1), sign(slope.n2))){
+    slope.n = mean(c(slope.n1, slope.n2))
+    cat("Nitrogen drift slope of", round(slope.n, 4), "applied.\n")
+    cat("PLRM1 SD before:", round(sd(plrm1$d15N_14N), 2), "and after:",
+        round(sd(drift.n1$residuals), 2), "\n")
+    cat("PLRM2 SD before:", round(sd(plrm2$d15N_14N), 2), "and after:",
+        round(sd(drift.n2$residuals), 2), "\n\n")
+  } else{
+    slope.n = 0
+  }
   
+  # Apply N Drift correction to slrms
+  slrm$d15N_14N = slrm$d15N_14N - slrm$Line * slope.n
+    
   # Plot linearity
   opar = par("mar")
   on.exit(par(mar = opar))
@@ -82,14 +124,17 @@ lin.fit = function(d){
   cat("Breakpoint =", summary(lin.seg)$psi[2], "\n")
   cat("R2 =", summary(lin.seg)$r.squared, "\n\n")
   
-  return(lin.seg)
+  return(list("slope.c" = slope.c, "slope.n" = slope.n, "linearity" = lin.seg))
 }
 
-lin.cor = function(d, lin.seg){
-  # Correct all data
-  d15N_pred = predict(lin.seg, data.frame("ln_AreaN" = d$ln_AreaN))
+corr.apply = function(d, corr){
+  # Apply drift corrections
+  d$d13C_dc = d$d13C_12C - d$Line * corr$slope.c
+  d$d15N_dc = d$d15N_14N - d$Line * corr$slope.n
   
-  d$d15N_lc = d$d15N_14N - d15N_pred
+  # Apply liniarity correction
+  d15N_pred = predict(corr$linearity, data.frame("ln_AreaN" = d$ln_AreaN))
+  d$d15N_lc = d$d15N_dc - d15N_pred
 
   return(d)
 }
@@ -102,16 +147,16 @@ calibrate = function(d){
   # Calibration equations
   calN.s = (9.3 + 4.6) / (mean(plrm1$d15N_lc) - mean(plrm2$d15N_lc)) 
   calN.i = -4.6 - mean(plrm2$d15N_lc) * calN.s
-  calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_12C) -
-                                 mean(plrm2$d13C_12C))
-  calC.i = -28.18 - mean(plrm2$d13C_12C) * calC.s
+  calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_dc) -
+                                 mean(plrm2$d13C_dc))
+  calC.i = -28.18 - mean(plrm2$d13C_dc) * calC.s
 
   n.s = mean(plrm2$Amount) * 9.52 / mean(plrm2$AreaAllN)
   c.s = mean(plrm2$Amount) * 40.81 / mean(plrm2$AreaAllC)
   
   # Calibrate all
   d$d15N_cal = d$d15N_lc * calN.s + calN.i
-  d$d13C_cal = d$d13C_12C * calC.s + calC.i
+  d$d13C_cal = d$d13C_dc * calC.s + calC.i
 
   d$Npct = d$AreaAllN * n.s / d$Amount
   d$Cpct = d$AreaAllC * c.s / d$Amount
