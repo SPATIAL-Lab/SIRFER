@@ -388,20 +388,32 @@ report.veg = function(fn, flagged = FALSE){
   man = read.csv(file.path("data", fn))
   veg = read.csv("db/veg.csv")
   
+  # Protect against inconsistent manifests
+  man = man[c("SIRFER.ID", "domainID", "sampleID", "sampleCode")]
+  if(ncol(man) != 4){
+    stop("Missing columns in manifest")
+  }
+  
   # Samples for manifest
   veg.sub = merge(man, veg, by.x = "SIRFER.ID", by.y = "Identifier1")
   
   # Remove QC flagged if requested
   if(!flagged){
-    qf = apply(veg.sub[, 58:61] != 0, 1, any)
+    qf = apply(veg.sub[c("cnPercentQF", "cnIsotopeQF", "percentAccuracyQF", 
+                         "isotopeAccuracyQF")] != 0, 1, any)
     il = nrow(veg.sub)
     veg.sub = veg.sub[!qf, ]
-    cat(il - nrow(veg.sub), "rows removed based on QC flags.\n")
+    cat(il - nrow(veg.sub), "rows removed based on QC flags\n")
+  }
+  
+  # Catch zero
+  if(nrow(veg.sub) == 0){
+    stop("\nNo samples in report")
   }
   
   if(!all(man$SIRFER.ID %in% veg.sub$SIRFER.ID)){
     miss = man$SIRFER.ID[!(man$SIRFER.ID %in% veg.sub$SIRFER.ID)]
-    message(paste("Samples", miss, "not in database"))
+    message(paste("Sample", miss, "not in database\n"))
   }
   
   # RMs for the manifest
