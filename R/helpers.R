@@ -172,3 +172,102 @@ cal = function(dl, plrm1, plrm2, slrm){
   return(list("c.cal" = c.cal, "o.cal" = o.cal, 
               "k.cal" = kfit.fix))  
 }
+
+fit.piece = function(x, y){
+  if(!identical(length(x), length(y))){
+    stop("x and y must be same length")
+  }
+
+  # Package
+  fit.best = piece()
+
+  # Ensure order
+  y = y[order(x)]
+  x = sort(x)
+  
+  # Piecewise regression
+  for(i in 3:(length(x) - 2)){
+    fit = piece()
+    
+    # Linear segment
+    lin = lm(y[1:i] ~ x[1:i])
+    fit$m = as.numeric(coef(lin)[2])
+    fit$b = as.numeric(coef(lin)[1])
+
+    # Mean of values above breakpoint
+    fit$h = mean(y[(i + 1):length(y)])
+    
+    # Recalculate breakpoint
+    fit$psi = as.numeric((fit$h - fit$b) / fit$m)
+
+    # R2
+    y.hat = predict.piece(fit, x)
+    fit$r2 = 1 - var(y.hat - y) / var(y)
+    if(length(fit.best$r2) == 0){
+      fit.best = fit
+    } else if(fit$r2 > fit.best$r2){
+      fit.best = fit
+    }
+  }
+  
+  if(fit.best$r2 < 0.3){
+    fit.best[1:5] = 0
+  }
+
+  return(fit.best)
+}
+
+predict.piece = function(fit, x){
+  if(!inherits(fit, "piece")){
+    stop("fit must be a piece")
+  }
+  
+  yx = function(x, fit){
+    if(x > fit$psi){
+      return(y = fit$h)
+    } else{
+      return(y = fit$b + x * fit$m)
+    }
+  }
+  
+  return(sapply(x, yx, fit))
+}
+
+lines.piece = function(fit){
+  if(!inherits(fit, "piece")){
+    stop("fit must be a piece")
+  }
+  
+  x = c(par("usr")[1], fit$psi, par("usr")[2])
+  y = predict.piece(fit, x)
+  lines(x, y)
+}
+
+plot.piece = function(x, y, fit){
+  if(!inherits(fit, "piece")){
+    stop("fit must be a piece")
+  }
+  if(!inherits(x, "numeric") | !inherits(y, "numeric")){
+    stop("x and y must be numeric")
+  }
+  if(!identical(length(x), length(y))){
+    stop("x and y must be same length")
+  }
+  
+  plot(x, y)
+  
+  x.hat = c(par("usr")[1], fit$psi, par("usr")[2])
+  y.hat = predict.piece(fit, x.hat)
+  lines(x.hat, y.hat)
+}
+
+piece = function(m = numeric(), b = numeric(), 
+                 psi = numeric(), h = numeric(),
+                 r2 = numeric()){
+  fit = list("m" = m, "b" = b, 
+             "psi" = psi, "h" = h,
+             "r2" = r2)
+  class(fit) = "piece"
+  
+  return(fit)
+}

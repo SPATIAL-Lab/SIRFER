@@ -1,4 +1,5 @@
 process.veg = function(fn){
+  source("R/helpers.R")
   
   # Prep data
   d = prepVeg(file.path("data", fn))
@@ -17,7 +18,6 @@ process.veg = function(fn){
   
   # Write results
   write.veg(d.qc, fn)
-  
 }
 
 prepVeg = function(fn){
@@ -55,37 +55,18 @@ prepVeg = function(fn){
   
   # Add ln(Area)
   d$ln_AreaN = log(d$AreaAllN)
+  d$ln_AreaC = log(d$AreaAllC)
   
   return(d)
 }
 
 corr.fit = function(d){
-  library(segmented)
-  
   # Parse out RMs
   plrm1 = d[d$Identifier1 == "UU-CN-3",]
   plrm2 = d[d$Identifier1 == "UU-CN-2",]
   slrm = d[d$Identifier1 == "SPINACH",]
 
   # Check for drift using plrms
-  ## Carbon
-  drift.c1 = lm(d13C_12C ~ Line, plrm1)
-  drift.c2 = lm(d13C_12C ~ Line, plrm2)
-  slope.c1 = summary(drift.c1)$coeff[2, 1]
-  slope.c2 = summary(drift.c2)$coeff[2, 1]
-  if(summary(drift.c1)$adj.r.squared > 0.5 &
-     summary(drift.c2)$adj.r.squared > 0.5 &
-     identical(sign(slope.c1), sign(slope.c2))){
-    slope.c = mean(c(slope.c1, slope.c2))
-    cat("Carbon drift slope of", round(slope.c, 4), "applied.\n\n")
-    cat("PLRM1 SD before:", round(sd(plrm1$d13C_12C), 2), "and after:",
-        round(sd(drift.c1$residuals), 2), "\n")
-    cat("PLRM2 SD before:", round(sd(plrm2$d13C_12C), 2), "and after:",
-        round(sd(drift.c2$residuals), 2), "\n\n")
-  } else{
-    slope.c = 0
-  }
-
   ## Nitrogen
   drift.n1 = lm(d15N_14N ~ Line, plrm1)
   drift.n2 = lm(d15N_14N ~ Line, plrm2)
@@ -97,17 +78,38 @@ corr.fit = function(d){
     slope.n = mean(c(slope.n1, slope.n2))
     cat("Nitrogen drift slope of", round(slope.n, 4), "applied.\n")
     cat("PLRM1 SD before:", round(sd(plrm1$d15N_14N), 2), "and after:",
-        round(sd(drift.n1$residuals), 2), "\n")
+        round(sd(plrm1$d15N_14N - plrm1$Line * slope.n), 2), "\n")
     cat("PLRM2 SD before:", round(sd(plrm2$d15N_14N), 2), "and after:",
-        round(sd(drift.n2$residuals), 2), "\n\n")
+        round(sd(plrm2$d15N_14N - plrm2$Line * slope.n), 2), "\n\n")
   } else{
     slope.n = 0
+    cat("No nitrogen drift applied\n\n")
   }
   
-  # Apply N Drift correction to slrms
+  ## Carbon
+  drift.c1 = lm(d13C_12C ~ Line, plrm1)
+  drift.c2 = lm(d13C_12C ~ Line, plrm2)
+  slope.c1 = summary(drift.c1)$coeff[2, 1]
+  slope.c2 = summary(drift.c2)$coeff[2, 1]
+  if(summary(drift.c1)$adj.r.squared > 0.5 &
+     summary(drift.c2)$adj.r.squared > 0.5 &
+     identical(sign(slope.c1), sign(slope.c2))){
+    slope.c = mean(c(slope.c1, slope.c2))
+    cat("Carbon drift slope of", round(slope.c, 4), "applied.\n")
+    cat("PLRM1 SD before:", round(sd(plrm1$d13C_12C), 2), "and after:",
+        round(sd(plrm1$d13C_12C - plrm1$Line * slope.c), 2), "\n")
+    cat("PLRM2 SD before:", round(sd(plrm2$d13C_12C), 2), "and after:",
+        round(sd(plrm2$d13C_12C - plrm2$Line * slope.c), 2), "\n\n")
+  } else{
+    slope.c = 0
+    cat("No carbon drift correction applied.\n\n")
+  }
+
+  # Apply C and N Drift correction to slrms
   slrm$d15N_14N = slrm$d15N_14N - slrm$Line * slope.n
-    
-  # Plot linearity
+  slrm$d13C_12C = slrm$d13C_12C - slrm$Line * slope.c
+  
+  # Plot linearity N
   opar = par("mar")
   on.exit(par(mar = opar))
   par(mar = c(5, 5, 1, 1))
@@ -115,16 +117,35 @@ corr.fit = function(d){
        xlab = "ln(AreaN)", ylab = expression("SPINACH  "*delta^15*"N"))
 
   # Segmented regression
-  lin = lm(d15N_14N ~ ln_AreaN, data = slrm)
-  lin.seg = segmented(lin, ~ ln_AreaN, psi = 4, 
-                      control = seg.control(alpha = c(0.25, 0.75)))
-
-  # Add fit to plot, report r^2
-  plot(lin.seg, add = TRUE)  
-  cat("Breakpoint =", summary(lin.seg)$psi[2], "\n")
-  cat("R2 =", summary(lin.seg)$r.squared, "\n\n")
+  lin.n = fit.piece(slrm$ln_AreaN, slrm$d15N_14N)
   
-  return(list("slope.c" = slope.c, "slope.n" = slope.n, "linearity" = lin.seg))
+  # Add fit to plot, report r^2
+  if(lin.n$m != 0){
+    lines.piece(lin.n)
+    cat("N Breakpoint =", round(lin.n$psi, 2), "\n")
+    cat("N R2 =", round(lin.n$r2, 2), "\n\n")
+  } else{
+    cat("No nitrogen linearity correction applied.\n\n")
+  }
+  
+  # Plot linearity C
+  plot(slrm$ln_AreaC, slrm$d13C_12C,
+       xlab = "ln(AreaC)", ylab = expression("SPINACH  "*delta^13*"C"))
+  
+  # Segmented regression
+  lin.c = fit.piece(slrm$ln_AreaC, slrm$d13C_12C)
+  
+  # Add fit to plot, report r^2
+  if(lin.c$m != 0){
+    lines.piece(lin.c)
+    cat("C Breakpoint =", lin.c$psi, "\n")
+    cat("C R2 =", lin.c$r2, "\n\n")
+  } else{
+    cat("No carbon linearity correction applied.\n\n")
+  }
+  
+  return(list("slope.c" = slope.c, "slope.n" = slope.n, 
+              "lin.c" = lin.c, "lin.n" = lin.n))
 }
 
 corr.apply = function(d, corr){
@@ -132,10 +153,13 @@ corr.apply = function(d, corr){
   d$d13C_dc = d$d13C_12C - d$Line * corr$slope.c
   d$d15N_dc = d$d15N_14N - d$Line * corr$slope.n
   
-  # Apply liniarity correction
-  d15N_pred = predict(corr$linearity, data.frame("ln_AreaN" = d$ln_AreaN))
+  # Apply linearity correction
+  d15N_pred = predict.piece(corr$lin.n, d$ln_AreaN)
   d$d15N_lc = d$d15N_dc - d15N_pred
 
+  d13C_pred = predict.piece(corr$lin.c, d$ln_AreaC)
+  d$d13C_lc = d$d13C_dc - d13C_pred
+  
   return(d)
 }
 
@@ -147,16 +171,16 @@ calibrate = function(d){
   # Calibration equations
   calN.s = (9.3 + 4.6) / (mean(plrm1$d15N_lc) - mean(plrm2$d15N_lc)) 
   calN.i = -4.6 - mean(plrm2$d15N_lc) * calN.s
-  calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_dc) -
-                                 mean(plrm2$d13C_dc))
-  calC.i = -28.18 - mean(plrm2$d13C_dc) * calC.s
+  calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_lc) -
+                                 mean(plrm2$d13C_lc))
+  calC.i = -28.18 - mean(plrm2$d13C_lc) * calC.s
 
   n.s = mean(plrm2$Amount) * 9.52 / mean(plrm2$AreaAllN)
   c.s = mean(plrm2$Amount) * 40.81 / mean(plrm2$AreaAllC)
   
   # Calibrate all
   d$d15N_cal = d$d15N_lc * calN.s + calN.i
-  d$d13C_cal = d$d13C_dc * calC.s + calC.i
+  d$d13C_cal = d$d13C_lc * calC.s + calC.i
 
   d$Npct = d$AreaAllN * n.s / d$Amount
   d$Cpct = d$AreaAllC * c.s / d$Amount
@@ -473,7 +497,10 @@ report.veg = function(fn, flagged = FALSE){
                        "reviewedBy" = rep("gjbowen"))
 
   # Save report files
-  dfn = file.path("out", substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4))
+  jobnum = substr(veg.out$internalLabID[1], 1, 6)
+  fname = paste0(substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4), 
+                 "-", jobnum)
+  dfn = file.path("out", fname)
   qfn = paste0(dfn, "_QA.csv")
   dfn = paste0(dfn, ".csv")
   write.csv(veg.out, dfn, row.names = FALSE)
