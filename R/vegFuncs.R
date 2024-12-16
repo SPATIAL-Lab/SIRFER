@@ -18,6 +18,7 @@ process.veg = function(fn){
   
   # Write results
   write.veg(d.qc, fn)
+  
 }
 
 prepVeg = function(fn){
@@ -61,6 +62,10 @@ prepVeg = function(fn){
 }
 
 corr.fit = function(d){
+  opar = par("mar")
+  on.exit(par(mar = opar))
+  par(mar = c(5, 5, 3, 1))
+
   # Parse out RMs
   plrm1 = d[d$Identifier1 == "UU-CN-3",]
   plrm2 = d[d$Identifier1 == "UU-CN-2",]
@@ -72,8 +77,8 @@ corr.fit = function(d){
   drift.n2 = lm(d15N_14N ~ Line, plrm2)
   slope.n1 = summary(drift.n1)$coeff[2, 1]
   slope.n2 = summary(drift.n2)$coeff[2, 1]
-  if(summary(drift.n1)$adj.r.squared > 0.5 &
-     summary(drift.n2)$adj.r.squared > 0.5 &
+  if(summary(drift.n1)$adj.r.squared > 0.3 &
+     summary(drift.n2)$adj.r.squared > 0.3 &
      identical(sign(slope.n1), sign(slope.n2))){
     slope.n = mean(c(slope.n1, slope.n2))
     cat("Nitrogen drift slope of", round(slope.n, 4), "applied.\n")
@@ -86,13 +91,21 @@ corr.fit = function(d){
     cat("No nitrogen drift applied\n\n")
   }
   
+  plot(plrm1$Line, plrm1$d15N_14N - mean(plrm1$d15N_14N), xlim = range(d$Line),
+       ylim = range(c(plrm1$d15N_14N - mean(plrm1$d15N_14N), 
+                      plrm2$d15N_14N - mean(plrm2$d15N_14N))),
+       main = "N Drift", xlab = "Line", ylab = expression(Delta*delta^{15}*"N"),
+       pch = 21, bg = 2)
+  points(plrm2$Line, plrm2$d15N_14N - mean(plrm2$d15N_14N), pch = 21, bg = 3)
+  abline(0, slope.n)
+  
   ## Carbon
   drift.c1 = lm(d13C_12C ~ Line, plrm1)
   drift.c2 = lm(d13C_12C ~ Line, plrm2)
   slope.c1 = summary(drift.c1)$coeff[2, 1]
   slope.c2 = summary(drift.c2)$coeff[2, 1]
-  if(summary(drift.c1)$adj.r.squared > 0.5 &
-     summary(drift.c2)$adj.r.squared > 0.5 &
+  if(summary(drift.c1)$adj.r.squared > 0.3 &
+     summary(drift.c2)$adj.r.squared > 0.3 &
      identical(sign(slope.c1), sign(slope.c2))){
     slope.c = mean(c(slope.c1, slope.c2))
     cat("Carbon drift slope of", round(slope.c, 4), "applied.\n")
@@ -105,15 +118,20 @@ corr.fit = function(d){
     cat("No carbon drift correction applied.\n\n")
   }
 
+  plot(plrm1$Line, plrm1$d13C_12C - mean(plrm1$d13C_12C), xlim = range(d$Line),
+       ylim = range(c(plrm1$d13C_12C - mean(plrm1$d13C_12C), 
+                      plrm2$d13C_12C - mean(plrm2$d13C_12C))),
+       main = "C Drift", xlab = "Line", ylab = expression(Delta*delta^{13}*"C"),
+       pch = 21, bg = 2)
+  points(plrm2$Line, plrm2$d13C_12C - mean(plrm2$d13C_12C), pch = 21, bg = 3)
+  abline(0, slope.n)
+  
   # Apply C and N Drift correction to slrms
   slrm$d15N_14N = slrm$d15N_14N - slrm$Line * slope.n
   slrm$d13C_12C = slrm$d13C_12C - slrm$Line * slope.c
   
   # Plot linearity N
-  opar = par("mar")
-  on.exit(par(mar = opar))
-  par(mar = c(5, 5, 1, 1))
-  plot(slrm$ln_AreaN, slrm$d15N_14N,
+  plot(slrm$ln_AreaN, slrm$d15N_14N, main = "N linearity", pch = 21, bg = 2,
        xlab = "ln(AreaN)", ylab = expression("SPINACH  "*delta^15*"N"))
 
   # Segmented regression
@@ -129,7 +147,7 @@ corr.fit = function(d){
   }
   
   # Plot linearity C
-  plot(slrm$ln_AreaC, slrm$d13C_12C,
+  plot(slrm$ln_AreaC, slrm$d13C_12C, main = "C linearity", pch = 21, bg = 2,
        xlab = "ln(AreaC)", ylab = expression("SPINACH  "*delta^13*"C"))
   
   # Segmented regression
@@ -228,38 +246,36 @@ QC = function(d){
     d13C.flag = d13C_sd.flag = Cpct.flag = Cpct_sd.flag = rep("", 3)
   
   # QC criteria
-  for(i in 1:3){
-    if(abs(d15N_cal[i] - d15N_known[i]) > 0.4){
-      d15N.flag[i] = "*"
-    }
-    
-    if(!is.na(Npct_known[i]) & abs(Npct_meas[i] - Npct_known[i]) > 0.6){
-      Npct.flag[i] = "*"
-    }
-    
-    if(d15N_cal.sd[i] > 0.4){
-      d15N_sd.flag[i] = "*"
-    }
-    
-    if(Npct_meas.sd[i] > 0.6){
-      Npct_sd.flag[i] = "*"
-    }
-    
-    if(abs(d13C_cal[i] - d13C_known[i]) > 0.4){
-      d13C.flag[i] = "*"
-    }
-    
-    if(!is.na(Cpct_known[i]) & abs(Cpct_meas[i] - Cpct_known[i]) > 0.6){
-      Cpct.flag[i] = "*"
-    }
-    
-    if(d13C_cal.sd[i] > 0.4){
-      d13C_sd.flag[i] = "*"
-    }
-    
-    if(Cpct_meas.sd[i] > 0.6){
-      Cpct_sd.flag[i] = "*"
-    }
+  if(abs(d15N_cal[3] - d15N_known[3]) > 0.4){
+    d15N.flag[3] = "*"
+  }
+  
+  if(abs(Npct_meas[3] - Npct_known[3]) > 0.6){
+    Npct.flag[3] = "*"
+  }
+  
+  if(d15N_cal.sd[3] > 0.4){
+    d15N_sd.flag[3] = "*"
+  }
+  
+  if(Npct_meas.sd[3] > 0.6){
+    Npct_sd.flag[3] = "*"
+  }
+  
+  if(abs(d13C_cal[3] - d13C_known[3]) > 0.4){
+    d13C.flag[3] = "*"
+  }
+  
+  if(abs(Cpct_meas[3] - Cpct_known[3]) > 0.6){
+    Cpct.flag[3] = "*"
+  }
+  
+  if(d13C_cal.sd[3] > 0.4){
+    d13C_sd.flag[3] = "*"
+  }
+  
+  if(Cpct_meas.sd[3] > 0.6){
+    Cpct_sd.flag[3] = "*"
   }
   
   # QC report
@@ -396,6 +412,10 @@ read.veg = function(fn, rm.incl = FALSE){
 # TODO: Include option to report QF'd analyses
 #####
 report.veg = function(fn, flagged = FALSE){
+  opar = par("mar")
+  on.exit(par(mar = opar))
+  par(mar = c(5, 5, 3, 1))
+  
   if(!inherits(fn, "character")){
     stop("fn must be a manifest file name")
   }
@@ -475,6 +495,14 @@ report.veg = function(fn, flagged = FALSE){
                        "analyzedBy" = rep("schakraborty"),
                        "reviewedBy" = rep("gjbowen"))
 
+  plot(veg.out$d13C, veg.out$d15N, main = "Sample isotopes", 
+       xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"),
+       pch = 21, bg = 2)
+  
+  plot(veg.out$carbonPercent, veg.out$nitrogenPercent, 
+       main = "Sample composition", xlab = "wt% C", ylab = "wt% N",
+       pch = 21, bg = 2)
+  
   # QC reporting
   ref.out = data.frame("analysisDate" = format(as.Date(rm.sub$TimeCode), "%Y%m%d"),
                        "qaReferenceID" = rep("Spinach"),
@@ -494,8 +522,34 @@ report.veg = function(fn, flagged = FALSE){
                        "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
                        "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
                        "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep("gjbowen"))
+                       "reviewedBy" = rep(""))
 
+  ## Plot SPINACH isotopes 
+  x1 = -27.41 + c(-1, 1, 1, -1) * 0.2
+  y1 = -0.4 + c(-1, -1, 1, 1) * 0.2
+  x2 = -27.41 + c(-1, 1, 1, -1) * 0.4
+  y2 = -0.4 + c(-1, -1, 1, 1) * 0.4
+  plot(ref.out$d13C, ref.out$d15N, main = "SPINACH isotopes", 
+       xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"), 
+       xlim = range(c(x2, ref.out$d13C)), 
+       ylim = range(c(y2, ref.out$d15N)),
+       pch = 21, bg = 2)
+  polygon(x1, y1, border = 2, lwd = 2)
+  polygon(x2, y2, border = 2, lwd = 2)
+  
+  ## Plot SPINACH wt% 
+  x1 = 40.53 + c(-1, 1, 1, -1) * 0.3
+  y1 = 5.95 + c(-1, -1, 1, 1) * 0.3
+  x2 = 40.53 + c(-1, 1, 1, -1) * 0.6
+  y2 = 5.95 + c(-1, -1, 1, 1) * 0.6
+  plot(ref.out$carbonPercent, ref.out$nitrogenPercent, 
+       main = "SPINACH composition", xlab = "wt% C", ylab = "wt% N",
+       xlim = range(c(x2, ref.out$carbonPercent)),
+       ylim = range(c(y2, ref.out$nitrogenPercent)),
+       pch = 21, bg = 2)
+  polygon(x1, y1, border = 2, lwd = 2)
+  polygon(x2, y2, border = 2, lwd = 2)
+  
   # Save report files
   jobnum = substr(veg.out$internalLabID[1], 1, 6)
   fname = paste0(substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4), 
@@ -508,8 +562,6 @@ report.veg = function(fn, flagged = FALSE){
 
   # Summary
   cat(nrow(man), "samples in manifest.\n")
-  cat(nrow(veg.out), "rows reported.\n")
-  qf = apply(veg.out[, 15:18] != 0, 1, any)
-  cat(sum(qf), "rows flagged for quality.\n")
+  cat(length(unique(veg.out$sampleID)), "samples reported.\n")
 }
 
