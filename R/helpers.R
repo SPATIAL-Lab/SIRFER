@@ -223,10 +223,14 @@ predict.piece = function(fit, x){
   }
   
   yx = function(x, fit){
-    if(x > fit$psi){
-      return(y = fit$h)
+    if(!is.na(x)){
+      if(x > fit$psi){
+        return(y = fit$h)
+      } else{
+        return(y = fit$b + x * fit$m)
+      }
     } else{
-      return(y = fit$b + x * fit$m)
+      return(NA)
     }
   }
   

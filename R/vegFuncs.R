@@ -28,31 +28,84 @@ prepVeg = function(fn){
   d.N = as.data.frame(read_xls(fn, sheet = "N_conflo.wke"))
   d.C = as.data.frame(read_xls(fn, sheet = "C_conflo.wke"))
   
+  # Pull comments
+  com = unique(d.N$Comment)
+  
   # Pick peaks
-  d.N = d.N[d.N$`Peak Nr` == 2,]
-  d.C = d.C[d.C$`Peak Nr` == 3,]
+  d.N = d.N[d.N$`Is Ref _` == 0,]
+  d.C = d.C[d.C$`Is Ref _` == 0,]
   
   # Check column names
-  names(d.N) = gsub("Area All", "AreaAllN", names(d.N))
+  names(d.N) = gsub("^Area All$", "AreaAllN", names(d.N))
   names(d.N) = gsub("%", "PctN", names(d.N))
   names(d.N) = gsub("/", "_", names(d.N))
-  names(d.N) = gsub("Start", "StartN", names(d.N))
-  names(d.N) = gsub("End", "EndN", names(d.N))
+  names(d.N) = gsub("^Start$", "StartN", names(d.N))
+  names(d.N) = gsub("^End$", "EndN", names(d.N))
 
-  names(d.C) = gsub("Area All", "AreaAllC", names(d.C))
+  names(d.C) = gsub("^Area All$", "AreaAllC", names(d.C))
   names(d.C) = gsub("%", "PctC", names(d.C))
   names(d.C) = gsub("/", "_", names(d.C))
-  names(d.C) = gsub("Start", "StartC", names(d.C))
-  names(d.C) = gsub("Width", "WidthC", names(d.C))
+  names(d.C) = gsub("^Start$", "StartC", names(d.C))
+  names(d.C) = gsub("^Width$", "WidthC", names(d.C))
   
   # Merge
-  d = cbind(d.N, d.C[, 8:21])
+  d = merge(d.N, d.C[, c(1, 8:21)], by = "Line", all = TRUE)
   
   # Remove WS from field names
   names(d) = gsub(" ", "", names(d))
+  
+  # Catch missing IDs
+  for(i in seq_along(d$Line)){
+    if(is.na(d$Identifier1[i])){
+      d[i, 2:5] = d.C[match(d$Line[i], d.C$Line), 2:5]
+    }
+  }
+  
+  # Blank warning
+  if("blank tin" %in% d$Identifier1){
+    cat("Blank peak detected\n\n")
+  }
 
   # Drop blanks and conditioners
   d = d[!(d$Identifier1 %in% c("blank tin", "COND")),]
+  
+  # Identify CO2 trapping
+  jn = trimws(com[grep("Job", com)])
+  if(substr(jn, nchar(jn) - 3, nchar(jn)) %in% c("trap", "Trap", "TRAP")){
+    d$Trapping = rep("Y")
+    d[, 20:33] = rep(NA)
+    cat("CO2 trapping detected\n\n")
+  } else{
+    d$Trapping = rep("N")
+  }
+
+  # Identify missing peaks
+  d.missing = d[0, ]
+  for(i in seq_along(d$Line)){
+    start.m = mean(d$StartN, na.rm = TRUE)
+    start.sd = sd(d$StartN, na.rm = TRUE)
+    if(is.na(d$StartN[i]) | abs(d$StartN[i] - start.m) > 5 * start.sd){
+      d.missing = rbind(d.missing, d[i, ])
+    }
+  }
+  d = d[!(d$Line %in% d.missing$Line), ]
+
+  if(d$Trapping[1] == "N"){
+    for(i in seq_along(d$Line)){
+      start.m = mean(d$StartC, na.rm = TRUE)
+      start.sd = sd(d$StartC, na.rm = TRUE)
+      if(is.na(d$StartC[i]) | abs(d$StartC[i] - start.m) > 5 * start.sd){
+        d.missing = rbind(d.missing, d[i, ])
+      }
+    }
+  }
+  d = d[!(d$Line %in% d.missing$Line), ]
+  
+  if(nrow(d.missing) > 0){
+    cat("One or more missing peaks\n")
+    cat(paste(d.missing$Line,
+              d.missing$Identifier1, "\n", sep = "\t"), "\n")
+  }
   
   # Add ln(Area)
   d$ln_AreaN = log(d$AreaAllN)
@@ -100,33 +153,37 @@ corr.fit = function(d){
   abline(0, slope.n)
   
   ## Carbon
-  drift.c1 = lm(d13C_12C ~ Line, plrm1)
-  drift.c2 = lm(d13C_12C ~ Line, plrm2)
-  slope.c1 = summary(drift.c1)$coeff[2, 1]
-  slope.c2 = summary(drift.c2)$coeff[2, 1]
-  if(summary(drift.c1)$adj.r.squared > 0.3 &
-     summary(drift.c2)$adj.r.squared > 0.3 &
-     identical(sign(slope.c1), sign(slope.c2))){
-    slope.c = mean(c(slope.c1, slope.c2))
-    cat("Carbon drift slope of", round(slope.c, 4), "applied.\n")
-    cat("PLRM1 SD before:", round(sd(plrm1$d13C_12C), 2), "and after:",
-        round(sd(plrm1$d13C_12C - plrm1$Line * slope.c), 2), "\n")
-    cat("PLRM2 SD before:", round(sd(plrm2$d13C_12C), 2), "and after:",
-        round(sd(plrm2$d13C_12C - plrm2$Line * slope.c), 2), "\n\n")
+  if(d$Trapping[1] == "N"){
+    drift.c1 = lm(d13C_12C ~ Line, plrm1)
+    drift.c2 = lm(d13C_12C ~ Line, plrm2)
+    slope.c1 = summary(drift.c1)$coeff[2, 1]
+    slope.c2 = summary(drift.c2)$coeff[2, 1]
+    if(summary(drift.c1)$adj.r.squared > 0.3 &
+       summary(drift.c2)$adj.r.squared > 0.3 &
+       identical(sign(slope.c1), sign(slope.c2))){
+      slope.c = mean(c(slope.c1, slope.c2))
+      cat("Carbon drift slope of", round(slope.c, 4), "applied.\n")
+      cat("PLRM1 SD before:", round(sd(plrm1$d13C_12C), 2), "and after:",
+          round(sd(plrm1$d13C_12C - plrm1$Line * slope.c), 2), "\n")
+      cat("PLRM2 SD before:", round(sd(plrm2$d13C_12C), 2), "and after:",
+          round(sd(plrm2$d13C_12C - plrm2$Line * slope.c), 2), "\n\n")
+    } else{
+      slope.c = 0
+      cat("No carbon drift correction applied.\n\n")
+    }
+    
+    plot(plrm1$Line, plrm1$d13C_12C - mean(plrm1$d13C_12C), xlim = range(d$Line),
+         ylim = range(c(plrm1$d13C_12C - mean(plrm1$d13C_12C), 
+                        plrm2$d13C_12C - mean(plrm2$d13C_12C))),
+         main = "C Drift", xlab = "Line", ylab = expression(Delta*delta^{13}*"C"),
+         pch = 21, bg = 2)
+    points(plrm2$Line, plrm2$d13C_12C - mean(plrm2$d13C_12C), pch = 21, bg = 3)
+    abline(0, slope.n)
   } else{
     slope.c = 0
-    cat("No carbon drift correction applied.\n\n")
   }
 
-  plot(plrm1$Line, plrm1$d13C_12C - mean(plrm1$d13C_12C), xlim = range(d$Line),
-       ylim = range(c(plrm1$d13C_12C - mean(plrm1$d13C_12C), 
-                      plrm2$d13C_12C - mean(plrm2$d13C_12C))),
-       main = "C Drift", xlab = "Line", ylab = expression(Delta*delta^{13}*"C"),
-       pch = 21, bg = 2)
-  points(plrm2$Line, plrm2$d13C_12C - mean(plrm2$d13C_12C), pch = 21, bg = 3)
-  abline(0, slope.n)
-  
-  # Apply C and N Drift correction to slrms
+  # Apply C and N drift correction to slrms
   slrm$d15N_14N = slrm$d15N_14N - slrm$Line * slope.n
   slrm$d13C_12C = slrm$d13C_12C - slrm$Line * slope.c
   
@@ -146,30 +203,34 @@ corr.fit = function(d){
     cat("No nitrogen linearity correction applied.\n\n")
   }
   
-  # Plot linearity C
-  plot(slrm$ln_AreaC, slrm$d13C_12C, main = "C linearity", pch = 21, bg = 2,
-       xlab = "ln(AreaC)", ylab = expression("SPINACH  "*delta^13*"C"))
-  
-  # Segmented regression
-  lin.c = fit.piece(slrm$ln_AreaC, slrm$d13C_12C)
-  
-  # Add fit to plot, report r^2
-  if(lin.c$m != 0){
-    lines.piece(lin.c)
-    cat("C Breakpoint =", lin.c$psi, "\n")
-    cat("C R2 =", lin.c$r2, "\n\n")
+  if(d$Trapping[1] == "N"){
+    # Plot linearity C
+    plot(slrm$ln_AreaC, slrm$d13C_12C, main = "C linearity", pch = 21, bg = 2,
+         xlab = "ln(AreaC)", ylab = expression("SPINACH  "*delta^13*"C"))
+    
+    # Segmented regression
+    lin.c = fit.piece(slrm$ln_AreaC, slrm$d13C_12C)
+    
+    # Add fit to plot, report r^2
+    if(lin.c$m != 0){
+      lines.piece(lin.c)
+      cat("C Breakpoint =", lin.c$psi, "\n")
+      cat("C R2 =", lin.c$r2, "\n\n")
+    } else{
+      cat("No carbon linearity correction applied.\n\n")
+    }
   } else{
-    cat("No carbon linearity correction applied.\n\n")
+    lin.c = piece(0, 0, 0, 0, 0)
   }
   
-  return(list("slope.c" = slope.c, "slope.n" = slope.n, 
-              "lin.c" = lin.c, "lin.n" = lin.n))
+  return(list("slope.n" = slope.n, "slope.c" = slope.c, 
+              "lin.n" = lin.n, "lin.c" = lin.c))
 }
 
 corr.apply = function(d, corr){
   # Apply drift corrections
-  d$d13C_dc = d$d13C_12C - d$Line * corr$slope.c
   d$d15N_dc = d$d15N_14N - d$Line * corr$slope.n
+  d$d13C_dc = d$d13C_12C - d$Line * corr$slope.c
   
   # Apply linearity correction
   d15N_pred = predict.piece(corr$lin.n, d$ln_AreaN)
@@ -216,8 +277,14 @@ QC = function(d){
   opar = par("mar")
   on.exit(par(mar = opar))
   par(mar = c(5, 5, 1, 1))
-  plot(d$d13C_cal, d$d15N_cal, xlab = expression("Sample "*delta^13*"C"),
-       ylab = expression("Sample "*delta^15*"N"), pch = 21, bg = "grey60")
+  if(d$Trapping[1] == "N"){
+    plot(d$d13C_cal, d$d15N_cal, xlab = expression("Sample "*delta^13*"C"),
+         ylab = expression("Sample "*delta^15*"N"), pch = 21, bg = "grey60")
+  } else{
+    plot(density(d$d15N_cal, na.rm = TRUE), 
+         xlab = expression("Sample "*delta^15*"N"), ylab = "",
+         main = "", lwd = 2)
+  }
 
   d15N_known = c(9.3, -4.6, -0.4)  
   Npct_known = c(NA, 9.52, 5.95)
@@ -228,15 +295,15 @@ QC = function(d){
                mean(slrm$d15N_cal)), 1)
   d15N_cal.sd = round(c(sd(plrm1$d15N_cal), sd(plrm2$d15N_cal),
                         sd(slrm$d15N_cal)), 2)
-  d13C_cal = round(c(mean(plrm1$d13C_cal), mean(plrm2$d13C_cal),
-                     mean(slrm$d13C_cal)), 1)
-  d13C_cal.sd = round(c(sd(plrm1$d13C_cal), sd(plrm2$d13C_cal),
-                        sd(slrm$d13C_cal)), 2)
-  
   Npct_meas = round(c(mean(plrm1$Npct), mean(plrm2$Npct), 
                       mean(slrm$Npct)), 1)
   Npct_meas.sd = round(c(sd(plrm1$Npct), sd(plrm2$Npct), 
                          sd(slrm$Npct)), 1)
+  
+  d13C_cal = round(c(mean(plrm1$d13C_cal), mean(plrm2$d13C_cal),
+                     mean(slrm$d13C_cal)), 1)
+  d13C_cal.sd = round(c(sd(plrm1$d13C_cal), sd(plrm2$d13C_cal),
+                        sd(slrm$d13C_cal)), 2)
   Cpct_meas = round(c(mean(plrm1$Cpct), mean(plrm2$Cpct), 
                       mean(slrm$Cpct)), 1)
   Cpct_meas.sd = round(c(sd(plrm1$Cpct), sd(plrm2$Cpct), 
@@ -262,26 +329,28 @@ QC = function(d){
     Npct_sd.flag[3] = "*"
   }
   
-  if(abs(d13C_cal[3] - d13C_known[3]) > 0.4){
-    d13C.flag[3] = "*"
-  }
-  
-  if(abs(Cpct_meas[3] - Cpct_known[3]) > 0.6){
-    Cpct.flag[3] = "*"
-  }
-  
-  if(d13C_cal.sd[3] > 0.4){
-    d13C_sd.flag[3] = "*"
-  }
-  
-  if(Cpct_meas.sd[3] > 0.6){
-    Cpct_sd.flag[3] = "*"
+  if(d$Trapping[1] == "N"){
+    if(abs(d13C_cal[3] - d13C_known[3]) > 0.4){
+      d13C.flag[3] = "*"
+    }
+    
+    if(abs(Cpct_meas[3] - Cpct_known[3]) > 0.6){
+      Cpct.flag[3] = "*"
+    }
+    
+    if(d13C_cal.sd[3] > 0.4){
+      d13C_sd.flag[3] = "*"
+    }
+    
+    if(Cpct_meas.sd[3] > 0.6){
+      Cpct_sd.flag[3] = "*"
+    }
   }
   
   # QC report
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
              "d15N_known" = as.character(d15N_known),
-             "d15N_cal" = paste0(d15N_known, d15N.flag),
+             "d15N_cal" = paste0(d15N_cal, d15N.flag),
              "d15N_cal.sd" = paste0(d15N_cal.sd, d15N_sd.flag),
              "Npct_known" = as.character(Npct_known),
              "Npct_meas" = paste0(Npct_meas, Npct.flag),
@@ -289,7 +358,7 @@ QC = function(d){
 
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
                    "d13C_known" = as.character(d13C_known),
-                   "d13C_cal" = paste0(d13C_known, d13C.flag),
+                   "d13C_cal" = paste0(d13C_cal, d13C.flag),
                    "d13C_cal.sd" = paste0(d13C_cal.sd, d13C_sd.flag),
                    "Cpct_known" = as.character(Cpct_known),
                    "Cpct_meas" = paste0(Cpct_meas, Cpct.flag),
@@ -329,16 +398,28 @@ QC = function(d){
   
   # Sample QC
   d$yieldQF = rep(0)
-  d$yieldQF[d$AreaAllN > max(slrm$AreaAllN) * 1.25 |
-      d$AreaAllN < min(slrm$AreaAllN) * 0.75 |
-        d$AreaAllC > max(slrm$AreaAllC) * 1.25 |
-        d$AreaAllC < min(slrm$AreaAllC) * 0.75] = 1
+  if(d$Trapping[1] == "N"){
+    d$yieldQF[d$AreaAllN > max(slrm$AreaAllN) * 1.25 |
+                d$AreaAllN < min(slrm$AreaAllN) * 0.75 |
+                d$AreaAllC > max(slrm$AreaAllC) * 1.25 |
+                d$AreaAllC < min(slrm$AreaAllC) * 0.75] = 1
+  } else{
+    d$yieldQF[d$AreaAllN > max(slrm$AreaAllN) * 1.25 |
+                d$AreaAllN < min(slrm$AreaAllN) * 0.75] = 1
+  }
+  
+  if(sum(d$yieldQF == 1) > 0){
+    cat("C or N yield out of range\n")
+    cat(paste(d$Line[d$yieldQF == 1], 
+              d$Identifier1[d$yieldQF == 1], "\n", sep = "\t"), "\n")
+  }
+  
   d$yieldQF[d$Amount * d$Npct < 0.015] = 2
   
   if(sum(d$yieldQF == 2) > 0){
-  cat("Small samples\n")
+  cat("N yield below limit\n")
   cat(paste(d$Line[d$yieldQF == 2], 
-            d$Identifier1[d$yieldQF == 2], "\n"))
+            d$Identifier1[d$yieldQF == 2], "\n", sep = "\t"), "\n")
   }
   
   return(d)
@@ -361,12 +442,7 @@ write.veg = function(d, fn){
 
     sup = veg[v.ui %in% d.ui, ]
     veg = veg[!(v.ui %in% d.ui), ]
-    
-    #####
-    # TODO - identify prev runs of sample and assign analysis number
-    # TODO - identify if CO2 has been trapped, purge C data, flag
-    #####
-    
+
     # Append new data
     veg = rbind(veg, d)
     
@@ -408,9 +484,6 @@ read.veg = function(fn, rm.incl = FALSE){
   return(d)
 }
 
-#####
-# TODO: Include option to report QF'd analyses
-#####
 report.veg = function(fn, flagged = FALSE){
   opar = par("mar")
   on.exit(par(mar = opar))
@@ -441,25 +514,45 @@ report.veg = function(fn, flagged = FALSE){
   # Samples for manifest
   veg.sub = merge(man, veg, by.x = "SIRFER.ID", by.y = "Identifier1")
   
+  if(!all(man$SIRFER.ID %in% veg.sub$SIRFER.ID)){
+    miss = man$SIRFER.ID[!(man$SIRFER.ID %in% veg.sub$SIRFER.ID)]
+    message(paste("Sample", miss, "not in database\n"))
+  }
+  
   # Remove QC flagged if requested
+  # Otherwise report flagged samples w/o unflagged analysis
+  qf = apply(veg.sub[c("cnPercentQF", "cnIsotopeQF", "percentAccuracyQF", 
+                       "isotopeAccuracyQF", "yieldQF")] == 1, 1, any)
+  il = nrow(veg.sub)
   if(!flagged){
-    qf = apply(veg.sub[c("cnPercentQF", "cnIsotopeQF", "percentAccuracyQF", 
-                         "isotopeAccuracyQF")] != 0, 1, any)
-    il = nrow(veg.sub)
     veg.sub = veg.sub[!qf, ]
     cat(il - nrow(veg.sub), "rows removed based on QC flags\n")
+  } else{
+    veg.temp = veg.sub[!qf, ]
+    veg.add = veg.sub[!(veg.sub$sampleCode %in% veg.temp$sampleCode),]
+    veg.sub = rbind(veg.temp, veg.add)
+    cat(il - nrow(veg.sub), "rows removed based on QC flags\n")
+  }
+  
+  # Remove low N data if a CO2 trapped value is available
+  qf = veg.sub["yieldQF"] == 2
+  if(!flagged){
+    veg.sub$d15N_cal[qf] = veg.sub$Npct[qf] = NA
+    cat(sum(is.na(veg.sub$d15N_cal)), "N values removed for low yield\n")
+  } else{
+    veg.lowN = veg.sub$sampleCode[qf]
+    veg.trap = veg.sub$sampleCode[veg.sub$Trapping == "Y"]
+    veg.rm = veg.lowN[veg.lowN %in% veg.trap]
+    veg.sub$d15N_cal[qf & veg.sub$sampleCode %in% veg.rm] = 
+      veg.sub$Npct[qf & veg.sub$sampleCode %in% veg.rm] = NA
+    cat(sum(is.na(veg.sub$d15N_cal)), "N values removed for low yield\n")
   }
   
   # Catch zero
   if(nrow(veg.sub) == 0){
     stop("\nNo samples in report")
   }
-  
-  if(!all(man$SIRFER.ID %in% veg.sub$SIRFER.ID)){
-    miss = man$SIRFER.ID[!(man$SIRFER.ID %in% veg.sub$SIRFER.ID)]
-    message(paste("Sample", miss, "not in database\n"))
-  }
-  
+
   # RMs for the manifest
   runs = unique(veg.sub$DataFile)
   rm.sub = veg[veg$Identifier1 == "SPINACH",]
@@ -478,7 +571,7 @@ report.veg = function(fn, flagged = FALSE){
                        "internalLabID" = veg.sub$SIRFER.ID,
                        "runID" = gsub(".xls", "", veg.sub$DataFile),
                        "acidTreatment" = rep(""),
-                       "co2Trapped" = rep("N"),
+                       "co2Trapped" = veg.sub$Trapping,
                        "nitrogenPercent" = veg.sub$Npct,
                        "carbonPercent" = veg.sub$Cpct,
                        "CNratio" = veg.sub$Cpct / veg.sub$Npct,
@@ -522,7 +615,7 @@ report.veg = function(fn, flagged = FALSE){
                        "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
                        "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
                        "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep(""))
+                       "reviewedBy" = rep("gjbowen"))
 
   ## Plot SPINACH isotopes 
   x1 = -27.41 + c(-1, 1, 1, -1) * 0.2
