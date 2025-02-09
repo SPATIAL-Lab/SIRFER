@@ -291,23 +291,23 @@ QC = function(d){
   d13C_known = c(-12.35, -28.18, -27.41)
   Cpct_known = c(NA, 40.81, 40.53)
   
-  d15N_cal = round(c(mean(plrm1$d15N_cal), mean(plrm2$d15N_cal),
-               mean(slrm$d15N_cal)), 1)
-  d15N_cal.sd = round(c(sd(plrm1$d15N_cal), sd(plrm2$d15N_cal),
-                        sd(slrm$d15N_cal)), 2)
-  Npct_meas = round(c(mean(plrm1$Npct), mean(plrm2$Npct), 
-                      mean(slrm$Npct)), 1)
-  Npct_meas.sd = round(c(sd(plrm1$Npct), sd(plrm2$Npct), 
-                         sd(slrm$Npct)), 1)
+  d15N_cal = c(mean(plrm1$d15N_cal), mean(plrm2$d15N_cal),
+               mean(slrm$d15N_cal))
+  d15N_cal.sd = c(sd(plrm1$d15N_cal), sd(plrm2$d15N_cal),
+                        sd(slrm$d15N_cal))
+  Npct_meas = c(mean(plrm1$Npct), mean(plrm2$Npct), 
+                      mean(slrm$Npct))
+  Npct_meas.sd = c(sd(plrm1$Npct), sd(plrm2$Npct), 
+                         sd(slrm$Npct))
   
-  d13C_cal = round(c(mean(plrm1$d13C_cal), mean(plrm2$d13C_cal),
-                     mean(slrm$d13C_cal)), 1)
-  d13C_cal.sd = round(c(sd(plrm1$d13C_cal), sd(plrm2$d13C_cal),
-                        sd(slrm$d13C_cal)), 2)
-  Cpct_meas = round(c(mean(plrm1$Cpct), mean(plrm2$Cpct), 
-                      mean(slrm$Cpct)), 1)
-  Cpct_meas.sd = round(c(sd(plrm1$Cpct), sd(plrm2$Cpct), 
-                         sd(slrm$Cpct)), 1)
+  d13C_cal = c(mean(plrm1$d13C_cal), mean(plrm2$d13C_cal),
+                     mean(slrm$d13C_cal))
+  d13C_cal.sd = c(sd(plrm1$d13C_cal), sd(plrm2$d13C_cal),
+                        sd(slrm$d13C_cal))
+  Cpct_meas = c(mean(plrm1$Cpct), mean(plrm2$Cpct), 
+                      mean(slrm$Cpct))
+  Cpct_meas.sd = c(sd(plrm1$Cpct), sd(plrm2$Cpct), 
+                         sd(slrm$Cpct))
   
   d15N.flag = d15N_sd.flag = Npct.flag = Npct_sd.flag =
     d13C.flag = d13C_sd.flag = Cpct.flag = Cpct_sd.flag = rep("", 3)
@@ -350,19 +350,19 @@ QC = function(d){
   # QC report
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
              "d15N_known" = as.character(d15N_known),
-             "d15N_cal" = paste0(d15N_cal, d15N.flag),
-             "d15N_cal.sd" = paste0(d15N_cal.sd, d15N_sd.flag),
+             "d15N_cal" = paste0(round(d15N_cal, 2), d15N.flag),
+             "d15N_cal.sd" = paste0(round(d15N_cal.sd, 2), d15N_sd.flag),
              "Npct_known" = as.character(Npct_known),
-             "Npct_meas" = paste0(Npct_meas, Npct.flag),
-             "Npct_meas.sd" = paste0(Npct_meas.sd, Npct_sd.flag)))
+             "Npct_meas" = paste0(round(Npct_meas, 2), Npct.flag),
+             "Npct_meas.sd" = paste0(round(Npct_meas.sd, 2), Npct_sd.flag)))
 
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
                    "d13C_known" = as.character(d13C_known),
-                   "d13C_cal" = paste0(d13C_cal, d13C.flag),
-                   "d13C_cal.sd" = paste0(d13C_cal.sd, d13C_sd.flag),
+                   "d13C_cal" = paste0(round(d13C_cal, 2), d13C.flag),
+                   "d13C_cal.sd" = paste0(round(d13C_cal.sd, 2), d13C_sd.flag),
                    "Cpct_known" = as.character(Cpct_known),
-                   "Cpct_meas" = paste0(Cpct_meas, Cpct.flag),
-                   "Cpct_meas.sd" = paste0(Cpct_meas.sd, Cpct_sd.flag)))
+                   "Cpct_meas" = paste0(round(Cpct_meas, 2), Cpct.flag),
+                   "Cpct_meas.sd" = paste0(round(Cpct_meas.sd, 2), Cpct_sd.flag)))
   
   # Recombine w/ standards
   d = rbind(d, plrm1, plrm2, slrm)
