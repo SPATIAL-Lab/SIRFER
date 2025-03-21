@@ -67,7 +67,7 @@ prepVeg = function(fn){
   }
 
   # Drop blanks and conditioners
-  d = d[!(d$Identifier1 %in% c("blank tin", "COND")),]
+  d = d[!(d$Identifier1 %in% c("blank tin", "COND", "EA Cond")),]
   
   # Identify CO2 trapping
   jn = trimws(com[grep("Job", com)])
@@ -280,6 +280,9 @@ QC = function(d){
   if(d$Trapping[1] == "N"){
     plot(d$d13C_cal, d$d15N_cal, xlab = expression("Sample "*delta^13*"C"),
          ylab = expression("Sample "*delta^15*"N"), pch = 21, bg = "grey60")
+    rect(-32, -10, -12, 10, col = "grey90")
+    points(d$d13C_cal, d$d15N_cal, pch = 21, bg = "grey60")
+    box()
   } else{
     plot(density(d$d15N_cal, na.rm = TRUE), 
          xlab = expression("Sample "*delta^15*"N"), ylab = "",
@@ -501,6 +504,9 @@ report.veg = function(fn, flagged = FALSE){
     stop("flagged must be TRUE/FALSE")
   }
   
+  # Job number
+  jn = substr(fn, nchar(fn) - 9, nchar(fn) - 4)
+  
   # Read manifest
   man = read.csv(file.path("data", fn))
   veg = read.csv("db/veg.csv")
@@ -553,14 +559,19 @@ report.veg = function(fn, flagged = FALSE){
     stop("\nNo samples in report")
   }
 
-  # RMs for the manifest
+  # RMs for the manifest - screen using job number to aviod replicate reporting
   runs = unique(veg.sub$DataFile)
-  rm.sub = veg[veg$Identifier1 == "SPINACH",]
-  rm.sub = rm.sub[rm.sub$DataFile %in% runs,]
-  rm.sub$rep = rep(0)
-  for(i in runs){
-    nr = sum(rm.sub$DataFile == i)
-    rm.sub$rep[rm.sub$DataFile == i] = 1:nr
+  jn1 = substr(runs, 8, 13)
+  runs = runs[jn1 == jn]
+  if(length(runs) != 0) qa.rep = TRUE else qa.rep = FALSE
+  if(qa.rep){
+    rm.sub = veg[veg$Identifier1 == "SPINACH",]
+    rm.sub = rm.sub[rm.sub$DataFile %in% runs,]
+    rm.sub$rep = rep(0)
+    for(i in runs){
+      nr = sum(rm.sub$DataFile == i)
+      rm.sub$rep[rm.sub$DataFile == i] = 1:nr
+    }
   }
   
   # Sample reporting
@@ -597,61 +608,63 @@ report.veg = function(fn, flagged = FALSE){
        pch = 21, bg = 2)
   
   # QC reporting
-  ref.out = data.frame("analysisDate" = format(as.Date(rm.sub$TimeCode), "%Y%m%d"),
-                       "qaReferenceID" = rep("Spinach"),
-                       "internalLabID" = rep(NA),
-                       "runID" = gsub(".xls", "", rm.sub$DataFile),
-                       "nitrogenPercent" = rm.sub$Npct,
-                       "carbonPercent" = rm.sub$Cpct,
-                       "CNratio" = rm.sub$Cpct / rm.sub$Npct,
-                       "d15N" = rm.sub$d15N_cal,
-                       "d13C" = rm.sub$d13C_cal,
-                       "analyticalRepNumber" = rm.sub$rep,
-                       "cnPercentQF" = rm.sub$cnPercentQF,
-                       "cnIsotopeQF" = rm.sub$cnIsotopeQF,
-                       "percentAccuracyQF" = rm.sub$percentAccuracyQF,
-                       "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
-                       "remarks" = rep(""),
-                       "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
-                       "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
-                       "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep("gjbowen"))
+  if(qa.rep){
+    ref.out = data.frame("analysisDate" = format(as.Date(rm.sub$TimeCode), "%Y%m%d"),
+                         "qaReferenceID" = rep("Spinach"),
+                         "internalLabID" = rep(NA),
+                         "runID" = gsub(".xls", "", rm.sub$DataFile),
+                         "nitrogenPercent" = rm.sub$Npct,
+                         "carbonPercent" = rm.sub$Cpct,
+                         "CNratio" = rm.sub$Cpct / rm.sub$Npct,
+                         "d15N" = rm.sub$d15N_cal,
+                         "d13C" = rm.sub$d13C_cal,
+                         "analyticalRepNumber" = rm.sub$rep,
+                         "cnPercentQF" = rm.sub$cnPercentQF,
+                         "cnIsotopeQF" = rm.sub$cnIsotopeQF,
+                         "percentAccuracyQF" = rm.sub$percentAccuracyQF,
+                         "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
+                         "remarks" = rep(""),
+                         "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
+                         "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
+                         "analyzedBy" = rep("schakraborty"),
+                         "reviewedBy" = rep("gjbowen"))
+    
+    ## Plot SPINACH isotopes 
+    x1 = -27.41 + c(-1, 1, 1, -1) * 0.2
+    y1 = -0.4 + c(-1, -1, 1, 1) * 0.2
+    x2 = -27.41 + c(-1, 1, 1, -1) * 0.4
+    y2 = -0.4 + c(-1, -1, 1, 1) * 0.4
+    plot(ref.out$d13C, ref.out$d15N, main = "SPINACH isotopes", 
+         xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"), 
+         xlim = range(c(x2, ref.out$d13C)), 
+         ylim = range(c(y2, ref.out$d15N)),
+         pch = 21, bg = 2)
+    polygon(x1, y1, border = 2, lwd = 2)
+    polygon(x2, y2, border = 2, lwd = 2)
+    
+    ## Plot SPINACH wt% 
+    x1 = 40.53 + c(-1, 1, 1, -1) * 0.3
+    y1 = 5.95 + c(-1, -1, 1, 1) * 0.3
+    x2 = 40.53 + c(-1, 1, 1, -1) * 0.6
+    y2 = 5.95 + c(-1, -1, 1, 1) * 0.6
+    plot(ref.out$carbonPercent, ref.out$nitrogenPercent, 
+         main = "SPINACH composition", xlab = "wt% C", ylab = "wt% N",
+         xlim = range(c(x2, ref.out$carbonPercent)),
+         ylim = range(c(y2, ref.out$nitrogenPercent)),
+         pch = 21, bg = 2)
+    polygon(x1, y1, border = 2, lwd = 2)
+    polygon(x2, y2, border = 2, lwd = 2)
+  }
 
-  ## Plot SPINACH isotopes 
-  x1 = -27.41 + c(-1, 1, 1, -1) * 0.2
-  y1 = -0.4 + c(-1, -1, 1, 1) * 0.2
-  x2 = -27.41 + c(-1, 1, 1, -1) * 0.4
-  y2 = -0.4 + c(-1, -1, 1, 1) * 0.4
-  plot(ref.out$d13C, ref.out$d15N, main = "SPINACH isotopes", 
-       xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"), 
-       xlim = range(c(x2, ref.out$d13C)), 
-       ylim = range(c(y2, ref.out$d15N)),
-       pch = 21, bg = 2)
-  polygon(x1, y1, border = 2, lwd = 2)
-  polygon(x2, y2, border = 2, lwd = 2)
-  
-  ## Plot SPINACH wt% 
-  x1 = 40.53 + c(-1, 1, 1, -1) * 0.3
-  y1 = 5.95 + c(-1, -1, 1, 1) * 0.3
-  x2 = 40.53 + c(-1, 1, 1, -1) * 0.6
-  y2 = 5.95 + c(-1, -1, 1, 1) * 0.6
-  plot(ref.out$carbonPercent, ref.out$nitrogenPercent, 
-       main = "SPINACH composition", xlab = "wt% C", ylab = "wt% N",
-       xlim = range(c(x2, ref.out$carbonPercent)),
-       ylim = range(c(y2, ref.out$nitrogenPercent)),
-       pch = 21, bg = 2)
-  polygon(x1, y1, border = 2, lwd = 2)
-  polygon(x2, y2, border = 2, lwd = 2)
-  
   # Save report files
-  jobnum = substr(veg.out$internalLabID[1], 1, 6)
-  fname = paste0(substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4), 
-                 "-", jobnum)
+  fname = substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4)  
   dfn = file.path("out", fname)
   qfn = paste0(dfn, "_QA.csv")
   dfn = paste0(dfn, ".csv")
   write.csv(veg.out, dfn, row.names = FALSE)
-  write.csv(ref.out, qfn, row.names = FALSE)
+  if(qa.rep){
+    write.csv(ref.out, qfn, row.names = FALSE)
+  }
 
   # Summary
   cat(nrow(man), "samples in manifest.\n")
