@@ -11,12 +11,20 @@ process.veg("241127_24-364.1.xls") # looks good
 process.veg("241202_24-364.2.xls") # looks good
 process.veg("241204_24-333.1-RERUN.xls")
 
-# Reported
+process.veg("241203_24-379.1.xls")
+process.veg("241205_24-379.2.xls")
+process.veg("241212_24-379.3-383.xls")
 
-# Not yet reported
+
+
+# Reported
 report.veg("manifest_for_D1120240812104411337.csv")
 report.veg("manifest_for_D0820240611135002668.csv")
 report.veg("manifest_for_D0620240710111247324.csv")
 report.veg("manifest_for_D0520240913150338770.csv")
 report.veg("manifest_for_D0320240801082752226.csv")
+report.veg("manifest_for_D1720241010100424502.csv")
+report.veg("manifest_for_D0620241014123903736.csv")
+
+# Not yet reported
 
