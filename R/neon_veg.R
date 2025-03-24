@@ -26,6 +26,8 @@ process.veg("250319_24-441.3.xls")
 ## Low yield
 View(read.veg("250319_24-441.3.xls"))
 process.veg("250320_24-441.4-443.xls")
+process.veg("250321_24-442.1.xls")
+process.veg("250323_24-442.2-441.5.xls")
 
 # Not yet processed
 
@@ -40,10 +42,10 @@ report.veg("manifest_for_D0620241014123903736.csv")
 report.veg("manifest_for_D1320240807142613008-24-320.csv")
 report.veg("manifest_for_D192024120312931971-24-439.csv")
 report.veg("manifest_for_D1920241121120601456-24-443.csv")
+report.veg("manifest_for_D1320241203120718173-24-441.csv", TRUE)
+report.veg("manifest_for_D06202412994102391-24-442.csv")
 
 # Not yet reported
-report.veg("manifest_for_D1320241203120718173-24-441.csv")
-
 
 
 
