@@ -574,6 +574,12 @@ report.veg = function(fn, flagged = FALSE){
     }
   }
   
+  # Values
+  testMethod = "NEON_vegIso_SOPv1.0"
+  instrument = "Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"
+  analyzedBy = "schakraborty"
+  reviewedBy = "gjbowen"
+  
   # Sample reporting
   veg.out = data.frame("analysisDate" = format(as.Date(veg.sub$TimeCode), "%Y%m%d"),
                        "sampleID" = veg.sub$sampleID,
@@ -594,10 +600,10 @@ report.veg = function(fn, flagged = FALSE){
                        "percentAccuracyQF" = veg.sub$percentAccuracyQF,
                        "isotopeAccuracyQF" = veg.sub$isotopeAccuracyQF,
                        "remarks" = rep(""),
-                       "testMethod" = rep("NEON_vegIso_SOPv1.0"),
-                       "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
-                       "analyzedBy" = rep("schakraborty"),
-                       "reviewedBy" = rep("gjbowen"))
+                       "testMethod" = rep(testMethod),
+                       "instrument" = rep(instrument),
+                       "analyzedBy" = rep(analyzedBy),
+                       "reviewedBy" = rep(reviewedBy))
 
   plot(veg.out$d13C, veg.out$d15N, main = "Sample isotopes", 
        xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"),
@@ -624,10 +630,10 @@ report.veg = function(fn, flagged = FALSE){
                          "percentAccuracyQF" = rm.sub$percentAccuracyQF,
                          "isotopeAccuracyQF" = rm.sub$isotopeAccuracyQF,
                          "remarks" = rep(""),
-                         "testMethod" = rep("NEON_vegIso_SOP.v1.0"),
-                         "instrument" = rep("Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"),
-                         "analyzedBy" = rep("schakraborty"),
-                         "reviewedBy" = rep("gjbowen"))
+                         "testMethod" = rep(testMethod),
+                         "instrument" = rep(instrument),
+                         "analyzedBy" = rep(analyzedBy),
+                         "reviewedBy" = rep(reviewedBy))
     
     ## Plot SPINACH isotopes 
     x1 = -27.41 + c(-1, 1, 1, -1) * 0.2
