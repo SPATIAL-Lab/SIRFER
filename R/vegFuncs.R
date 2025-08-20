@@ -25,8 +25,14 @@ prepVeg = function(fn){
   library(readxl)
   
   # Read file
-  d.N = as.data.frame(read_xls(fn, sheet = "N_conflo.wke"))
-  d.C = as.data.frame(read_xls(fn, sheet = "C_conflo.wke"))
+  sns = excel_sheets(fn)
+  sinds = c(grep("^N", sns), grep("^C", sns))
+  if(length(sinds) < 2){stop("Cannot match sheets")}
+  d.N = as.data.frame(read_xls(fn, sheet = sinds[1]))
+  d.C = as.data.frame(read_xls(fn, sheet = sinds[2]))
+  
+  # Enforce naming of column 1
+  names(d.N)[1] = names(d.C)[1] = "Line"
   
   # Pull comments
   com = unique(d.N$Comment)
@@ -67,7 +73,7 @@ prepVeg = function(fn){
   }
 
   # Drop blanks and conditioners
-  d = d[!(d$Identifier1 %in% c("blank tin", "COND", "EA Cond")),]
+  d = d[!(d$Identifier1 %in% c("blank tin", "tin blank", "COND", "EA Cond")),]
   
   # Identify CO2 trapping
   jn = trimws(com[grep("Job", com)])
@@ -559,9 +565,9 @@ report.veg = function(fn, flagged = FALSE){
     stop("\nNo samples in report")
   }
 
-  # RMs for the manifest - screen using job number to aviod replicate reporting
+  # RMs for the manifest - screen using job number to avoid replicate reporting
   runs = unique(veg.sub$DataFile)
-  jn1 = substr(runs, 8, 13)
+  jn1 = substr(runs, 1, 6)
   runs = runs[jn1 == jn]
   if(length(runs) != 0) qa.rep = TRUE else qa.rep = FALSE
   if(qa.rep){
@@ -576,7 +582,9 @@ report.veg = function(fn, flagged = FALSE){
   
   # Values
   testMethod = "NEON_vegIso_SOPv1.0"
-  instrument = "Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"
+#  instrument = "Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"
+#  instrument = "Thermo Flash EA with Costech Zero Blank Autosampler coupled to Thermo Delta V Plus via Conflo IV interface"
+  instrument = "IN7"
   analyzedBy = "schakraborty"
   reviewedBy = "gjbowen"
   
@@ -608,10 +616,16 @@ report.veg = function(fn, flagged = FALSE){
   plot(veg.out$d13C, veg.out$d15N, main = "Sample isotopes", 
        xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"),
        pch = 21, bg = 2)
+  polygon(c(-32, -32, -12, -12), c(-10, 10, 10, -10), col = "grey")
+  points(veg.out$d13C, veg.out$d15N, pch = 21, bg = 2)
+  box()
   
   plot(veg.out$carbonPercent, veg.out$nitrogenPercent, 
        main = "Sample composition", xlab = "wt% C", ylab = "wt% N",
        pch = 21, bg = 2)
+  polygon(c(30, 30, 60, 60), c(0.1, 8, 8, 0.1), col = "grey")
+  points(veg.out$carbonPercent, veg.out$nitrogenPercent, pch = 21, bg = 2)
+  box()
   
   # QC reporting
   if(qa.rep){
