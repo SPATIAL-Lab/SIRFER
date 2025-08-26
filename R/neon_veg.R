@@ -41,9 +41,14 @@ process.veg("25-066.3.xls")
 process.veg("25-021.xls")
 process.veg("25-023.xls")
 process.veg("25-024.xls")
+process.veg("25-068.xls")
+process.veg("25-069.1.xls")
+process.veg("25-069.2.xls")
+process.veg("25-069.3.xls")
+process.veg("25-069.4.xls")
 
 # Not yet processed
-process.veg("25-068.xls")
+
 
 # Reporting ----
 
@@ -67,6 +72,7 @@ report.veg("manifest_for_D172025020392305528-25-066.csv")
 report.veg("manifest_for_D1320250106113438993-25-021.csv")
 report.veg("manifest_for_D1120250114083929854-25-023.csv")
 report.veg("manifest_for_D0120250103140101600-25-024.csv")
+report.veg("manifest_for_D012025021193042322-25-069.csv")
 
 # Not yet reported
-
+report.veg("manifest_for_D0320250212131213350-25-068.csv")
