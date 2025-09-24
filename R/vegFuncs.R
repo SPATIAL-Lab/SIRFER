@@ -156,7 +156,7 @@ corr.fit = function(d){
        main = "N Drift", xlab = "Line", ylab = expression(Delta*delta^{15}*"N"),
        pch = 21, bg = 2)
   points(plrm2$Line, plrm2$d15N_14N - mean(plrm2$d15N_14N), pch = 21, bg = 3)
-  abline(0, slope.n)
+  abline(0 - mean(c(plrm1$Line, plrm2$Line)) * slope.n, slope.n)
   
   ## Carbon
   if(d$Trapping[1] == "N"){
@@ -184,7 +184,7 @@ corr.fit = function(d){
          main = "C Drift", xlab = "Line", ylab = expression(Delta*delta^{13}*"C"),
          pch = 21, bg = 2)
     points(plrm2$Line, plrm2$d13C_12C - mean(plrm2$d13C_12C), pch = 21, bg = 3)
-    abline(0, slope.n)
+    abline(0 - mean(c(plrm1$Line, plrm2$Line)) * slope.c, slope.c)
   } else{
     slope.c = 0
   }
