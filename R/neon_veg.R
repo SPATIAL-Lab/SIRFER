@@ -1,5 +1,7 @@
 source("R/vegFuncs.R")
 
+# Processing ----
+
 # Processed
 process.veg("241118_24-333.1.xls") # noisy spinach d15N
 process.veg("241119_24-333.2.xls") # opposite d15N trend 
@@ -28,12 +30,40 @@ View(read.veg("250319_24-441.3.xls"))
 process.veg("250320_24-441.4-443.xls")
 process.veg("250321_24-442.1.xls")
 process.veg("250323_24-442.2-441.5.xls")
+process.veg("250507_24-364.1-redo.xls")
+process.veg("25-065.1.xls")
+process.veg("25-065.2.xls")
+process.veg("25-065.3.xls")
+process.veg("25-065.4.xls")
+process.veg("25-066.1.xls")
+process.veg("25-066.2.xls")
+process.veg("25-066.3.xls")
+process.veg("25-021.xls")
+process.veg("25-023.xls")
+process.veg("25-024.xls")
+process.veg("25-068.xls")
+process.veg("25-069.1.xls")
+process.veg("25-069.2.xls")
+process.veg("25-069.3.xls")
+process.veg("25-069.4.xls")
+process.veg("25-047.1.xls")
+process.veg("25-047.2.xls")
+process.veg("25-095.1.xls")
+process.veg("25-095.2.xls")
+process.veg("25-095.3.xls")
+process.veg("25-095.4-98.1.xls")
+process.veg("25-098.2.xls")
+process.veg("25-098.3.xls")
+process.veg("25-098.4.xls")
+process.veg("25-064.1.xls")
 
 # Not yet processed
 process.veg("25-065.1.xls")
 process.veg("25-065.2.xls")
 process.veg("25-065.3.xls")
 process.veg("25-065.4.xls")
+
+# Reporting ----
 
 # Reported
 report.veg("manifest_for_D1120240812104411337.csv")
@@ -49,9 +79,17 @@ report.veg("manifest_for_D1920241121120601456-24-443.csv")
 report.veg("manifest_for_D1320241203120718173-24-441.csv", TRUE)
 report.veg("manifest_for_D06202412994102391-24-442.csv")
 report.veg("manifest_for_D0120241202120802894-24-440.csv")
+report.veg("manifest_for_D0520240913150338770-24-364.csv")
+report.veg("manifest_for_D032025021291856385-25-065.csv")
+report.veg("manifest_for_D172025020392305528-25-066.csv")
+report.veg("manifest_for_D1320250106113438993-25-021.csv")
+report.veg("manifest_for_D1120250114083929854-25-023.csv")
+report.veg("manifest_for_D0120250103140101600-25-024.csv")
+report.veg("manifest_for_D012025021193042322-25-069.csv")
+report.veg("manifest_for_D1720250128112824458-25-047.csv")
+report.veg("manifest_for_D0820250225130525311-25-064.csv")
+report.veg("manifest_for_D1720250403134927140-25-095.csv")
+report.veg("manifest_for_D1920250207144604785-25-098.csv")
 
 # Not yet reported
-
-
-
-
+report.veg("manifest_for_D0320250212131213350-25-068.csv")
