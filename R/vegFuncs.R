@@ -25,8 +25,11 @@ prepVeg = function(fn){
   library(readxl)
   
   # Read file
-  d.N = as.data.frame(read_xls(fn, sheet = "N_conflo.wke"))
-  d.C = as.data.frame(read_xls(fn, sheet = "C_conflo.wke"))
+  sns = excel_sheets(fn)
+  sind = c(grep("^N", sns), grep("^C", sns))
+  if(length(sind) < 2){stop("Unable to match sheets")}
+  d.N = as.data.frame(read_xls(fn, sheet = sind[1]))
+  d.C = as.data.frame(read_xls(fn, sheet = sind[2]))
   
   # Pull comments
   com = unique(d.N$Comment)

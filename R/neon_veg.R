@@ -30,6 +30,10 @@ process.veg("250321_24-442.1.xls")
 process.veg("250323_24-442.2-441.5.xls")
 
 # Not yet processed
+process.veg("25-065.1.xls")
+process.veg("25-065.2.xls")
+process.veg("25-065.3.xls")
+process.veg("25-065.4.xls")
 
 # Reported
 report.veg("manifest_for_D1120240812104411337.csv")
