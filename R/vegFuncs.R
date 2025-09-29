@@ -33,7 +33,7 @@ prepVeg = function(fn){
   
   # Enforce naming of column 1
   names(d.N)[1] = names(d.C)[1] = "Line"
-
+  
   # Pull comments
   com = unique(d.N$Comment)
   
@@ -47,7 +47,7 @@ prepVeg = function(fn){
   names(d.N) = gsub("/", "_", names(d.N))
   names(d.N) = gsub("^Start$", "StartN", names(d.N))
   names(d.N) = gsub("^End$", "EndN", names(d.N))
-
+  
   names(d.C) = gsub("^Area All$", "AreaAllC", names(d.C))
   names(d.C) = gsub("%", "PctC", names(d.C))
   names(d.C) = gsub("/", "_", names(d.C))
@@ -71,7 +71,7 @@ prepVeg = function(fn){
   if("blank tin" %in% d$Identifier1){
     cat("Blank peak detected\n\n")
   }
-
+  
   # Drop blanks and conditioners
   d = d[!(d$Identifier1 %in% c("blank tin", "tin blank", "COND", "EA Cond")),]
   
@@ -84,7 +84,7 @@ prepVeg = function(fn){
   } else{
     d$Trapping = rep("N")
   }
-
+  
   # Identify missing peaks
   d.missing = d[0, ]
   for(i in seq_along(d$Line)){
@@ -95,7 +95,7 @@ prepVeg = function(fn){
     }
   }
   d = d[!(d$Line %in% d.missing$Line), ]
-
+  
   if(d$Trapping[1] == "N"){
     for(i in seq_along(d$Line)){
       start.m = mean(d$StartC, na.rm = TRUE)
@@ -124,12 +124,12 @@ corr.fit = function(d){
   opar = par("mar")
   on.exit(par(mar = opar))
   par(mar = c(5, 5, 3, 1))
-
+  
   # Parse out RMs
   plrm1 = d[d$Identifier1 == "UU-CN-3",]
   plrm2 = d[d$Identifier1 == "UU-CN-2",]
   slrm = d[d$Identifier1 == "SPINACH",]
-
+  
   # Check for drift using plrms
   ## Nitrogen
   drift.n1 = lm(d15N_14N ~ Line, plrm1)
@@ -188,7 +188,7 @@ corr.fit = function(d){
   } else{
     slope.c = 0
   }
-
+  
   # Apply C and N drift correction to slrms
   slrm$d15N_14N = slrm$d15N_14N - slrm$Line * slope.n
   slrm$d13C_12C = slrm$d13C_12C - slrm$Line * slope.c
@@ -196,7 +196,7 @@ corr.fit = function(d){
   # Plot linearity N
   plot(slrm$ln_AreaN, slrm$d15N_14N, main = "N linearity", pch = 21, bg = 2,
        xlab = "ln(AreaN)", ylab = expression("SPINACH  "*delta^15*"N"))
-
+  
   # Segmented regression
   lin.n = fit.piece(slrm$ln_AreaN, slrm$d15N_14N)
   
@@ -241,7 +241,7 @@ corr.apply = function(d, corr){
   # Apply linearity correction
   d15N_pred = predict.piece(corr$lin.n, d$ln_AreaN)
   d$d15N_lc = d$d15N_dc - d15N_pred
-
+  
   d13C_pred = predict.piece(corr$lin.c, d$ln_AreaC)
   d$d13C_lc = d$d13C_dc - d13C_pred
   
@@ -259,14 +259,14 @@ calibrate = function(d){
   calC.s = (-12.35 + 28.18) / (mean(plrm1$d13C_lc) -
                                  mean(plrm2$d13C_lc))
   calC.i = -28.18 - mean(plrm2$d13C_lc) * calC.s
-
+  
   n.s = mean(plrm2$Amount) * 9.52 / mean(plrm2$AreaAllN)
   c.s = mean(plrm2$Amount) * 40.81 / mean(plrm2$AreaAllC)
   
   # Calibrate all
   d$d15N_cal = d$d15N_lc * calN.s + calN.i
   d$d13C_cal = d$d13C_lc * calC.s + calC.i
-
+  
   d$Npct = d$AreaAllN * n.s / d$Amount
   d$Cpct = d$AreaAllC * c.s / d$Amount
   
@@ -294,7 +294,7 @@ QC = function(d){
          xlab = expression("Sample "*delta^15*"N"), ylab = "",
          main = "", lwd = 2)
   }
-
+  
   d15N_known = c(9.3, -4.6, -0.4)  
   Npct_known = c(NA, 9.52, 5.95)
   d13C_known = c(-12.35, -28.18, -27.41)
@@ -303,20 +303,20 @@ QC = function(d){
   d15N_cal = c(mean(plrm1$d15N_cal), mean(plrm2$d15N_cal),
                mean(slrm$d15N_cal))
   d15N_cal.sd = c(sd(plrm1$d15N_cal), sd(plrm2$d15N_cal),
-                        sd(slrm$d15N_cal))
+                  sd(slrm$d15N_cal))
   Npct_meas = c(mean(plrm1$Npct), mean(plrm2$Npct), 
-                      mean(slrm$Npct))
+                mean(slrm$Npct))
   Npct_meas.sd = c(sd(plrm1$Npct), sd(plrm2$Npct), 
-                         sd(slrm$Npct))
+                   sd(slrm$Npct))
   
   d13C_cal = c(mean(plrm1$d13C_cal), mean(plrm2$d13C_cal),
-                     mean(slrm$d13C_cal))
+               mean(slrm$d13C_cal))
   d13C_cal.sd = c(sd(plrm1$d13C_cal), sd(plrm2$d13C_cal),
-                        sd(slrm$d13C_cal))
+                  sd(slrm$d13C_cal))
   Cpct_meas = c(mean(plrm1$Cpct), mean(plrm2$Cpct), 
-                      mean(slrm$Cpct))
+                mean(slrm$Cpct))
   Cpct_meas.sd = c(sd(plrm1$Cpct), sd(plrm2$Cpct), 
-                         sd(slrm$Cpct))
+                   sd(slrm$Cpct))
   
   d15N.flag = d15N_sd.flag = Npct.flag = Npct_sd.flag =
     d13C.flag = d13C_sd.flag = Cpct.flag = Cpct_sd.flag = rep("", 3)
@@ -358,13 +358,13 @@ QC = function(d){
   
   # QC report
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
-             "d15N_known" = as.character(d15N_known),
-             "d15N_cal" = paste0(round(d15N_cal, 2), d15N.flag),
-             "d15N_cal.sd" = paste0(round(d15N_cal.sd, 2), d15N_sd.flag),
-             "Npct_known" = as.character(Npct_known),
-             "Npct_meas" = paste0(round(Npct_meas, 2), Npct.flag),
-             "Npct_meas.sd" = paste0(round(Npct_meas.sd, 2), Npct_sd.flag)))
-
+                   "d15N_known" = as.character(d15N_known),
+                   "d15N_cal" = paste0(round(d15N_cal, 2), d15N.flag),
+                   "d15N_cal.sd" = paste0(round(d15N_cal.sd, 2), d15N_sd.flag),
+                   "Npct_known" = as.character(Npct_known),
+                   "Npct_meas" = paste0(round(Npct_meas, 2), Npct.flag),
+                   "Npct_meas.sd" = paste0(round(Npct_meas.sd, 2), Npct_sd.flag)))
+  
   print(data.frame("ID" = c("UU-CN-3", "UU-CN-2", "SPINACH"),
                    "d13C_known" = as.character(d13C_known),
                    "d13C_cal" = paste0(round(d13C_cal, 2), d13C.flag),
@@ -426,9 +426,9 @@ QC = function(d){
   d$yieldQF[d$Amount * d$Npct < 0.015] = 2
   
   if(sum(d$yieldQF == 2) > 0){
-  cat("N yield below limit\n")
-  cat(paste(d$Line[d$yieldQF == 2], 
-            d$Identifier1[d$yieldQF == 2], "\n", sep = "\t"), "\n")
+    cat("N yield below limit\n")
+    cat(paste(d$Line[d$yieldQF == 2], 
+              d$Identifier1[d$yieldQF == 2], "\n", sep = "\t"), "\n")
   }
   
   return(d)
@@ -448,10 +448,10 @@ write.veg = function(d, fn){
     # Find and remove existing data for these analyses, if any
     v.ui = paste0(veg$Identifier1, veg$TimeCode)
     d.ui = paste0(d$Identifier1, d$TimeCode)
-
+    
     sup = veg[v.ui %in% d.ui, ]
     veg = veg[!(v.ui %in% d.ui), ]
-
+    
     # Append new data
     veg = rbind(veg, d)
     
@@ -564,7 +564,7 @@ report.veg = function(fn, flagged = FALSE){
   if(nrow(veg.sub) == 0){
     stop("\nNo samples in report")
   }
-
+  
   # RMs for the manifest - screen using job number to avoid replicate reporting
   runs = unique(veg.sub$DataFile)
   jn1 = substr(runs, 1, 6)
@@ -582,8 +582,8 @@ report.veg = function(fn, flagged = FALSE){
   
   # Values
   testMethod = "NEON_vegIso_SOPv1.0"
-#  instrument = "Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"
-#  instrument = "Thermo Flash EA with Costech Zero Blank Autosampler coupled to Thermo Delta V Plus via Conflo IV interface"
+  #  instrument = "Carlo Erba 1110 Elemental Analyzer with Costech Zero Blank Autosampler coupled to Thermo Delta Plus Advantage IRMS with Conflo III Interface"
+  #  instrument = "Thermo Flash EA with Costech Zero Blank Autosampler coupled to Thermo Delta V Plus via Conflo IV interface"
   instrument = "IN7"
   analyzedBy = "schakraborty"
   reviewedBy = "gjbowen"
@@ -612,7 +612,7 @@ report.veg = function(fn, flagged = FALSE){
                        "instrument" = rep(instrument),
                        "analyzedBy" = rep(analyzedBy),
                        "reviewedBy" = rep(reviewedBy))
-
+  
   plot(veg.out$d13C, veg.out$d15N, main = "Sample isotopes", 
        xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"),
        pch = 21, bg = 2)
@@ -675,7 +675,7 @@ report.veg = function(fn, flagged = FALSE){
     polygon(x1, y1, border = 2, lwd = 2)
     polygon(x2, y2, border = 2, lwd = 2)
   }
-
+  
   # Save report files
   fname = substr(fn, regexec("D", fn)[[1]][1], nchar(fn) - 4)  
   dfn = file.path("out", fname)
@@ -685,9 +685,8 @@ report.veg = function(fn, flagged = FALSE){
   if(qa.rep){
     write.csv(ref.out, qfn, row.names = FALSE)
   }
-
+  
   # Summary
   cat(nrow(man), "samples in manifest.\n")
   cat(length(unique(veg.out$sampleID)), "samples reported.\n")
 }
-

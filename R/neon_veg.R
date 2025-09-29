@@ -56,12 +56,12 @@ process.veg("25-098.2.xls")
 process.veg("25-098.3.xls")
 process.veg("25-098.4.xls")
 process.veg("25-064.1.xls")
-
-# Not yet processed
 process.veg("25-065.1.xls")
 process.veg("25-065.2.xls")
 process.veg("25-065.3.xls")
 process.veg("25-065.4.xls")
+
+# Not yet processed
 
 # Reporting ----
 
