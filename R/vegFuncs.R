@@ -613,6 +613,15 @@ report.veg = function(fn, flagged = FALSE){
                        "analyzedBy" = rep(analyzedBy),
                        "reviewedBy" = rep(reviewedBy))
   
+  # Rep numbers
+  sids = unique(veg.out$internalLabID)
+  for(i in sids){
+    sm = grep(i, veg.out$internalLabID)
+    for(j in seq_along(sm)){
+      veg.out$analyticalRepNumber[sm[j]] = j
+    }
+  }
+  
   plot(veg.out$d13C, veg.out$d15N, main = "Sample isotopes", 
        xlab = expression(delta^{13}*"C"), ylab = expression(delta^{15}*"N"),
        pch = 21, bg = 2)

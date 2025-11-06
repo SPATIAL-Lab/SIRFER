@@ -65,6 +65,10 @@ process.veg("25-096.2.xls")
 process.veg("25-096.3.xls")
 process.veg("25-096.4.xls")
 process.veg("25-101.xls")
+process.veg("25-099.1.xls")
+process.veg("25-099.2.xls")
+process.veg("25-099.3.xls")
+process.veg("25-099.4-25-096.5.xls")
 
 # Not yet processed
 
@@ -96,7 +100,8 @@ report.veg("manifest_for_D0820250225130525311-25-064.csv")
 report.veg("manifest_for_D1720250403134927140-25-095.csv")
 report.veg("manifest_for_D1920250207144604785-25-098.csv")
 report.veg("manifest_for_D0520250218125157604-25-101.csv")
+report.veg("manifest_for_D082025032692651637-25-096.csv") # one reanalysis
+report.veg("manifest_for_D0520250327160403804-25-099.csv", TRUE)
 
 # Not yet reported
 report.veg("manifest_for_D0320250212131213350-25-068.csv") # 10 reanalyses
-report.veg("manifest_for_D082025032692651637-25-096.csv") # one reanalysis
