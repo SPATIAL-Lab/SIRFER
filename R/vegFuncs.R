@@ -613,6 +613,9 @@ report.veg = function(fn, flagged = FALSE){
                        "analyzedBy" = rep(analyzedBy),
                        "reviewedBy" = rep(reviewedBy))
   
+  # Sort
+  veg.out = veg.out[order(veg.out$analysisDate),]
+  
   # Rep numbers
   sids = unique(veg.out$internalLabID)
   for(i in sids){

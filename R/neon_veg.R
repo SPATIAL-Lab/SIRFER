@@ -75,6 +75,8 @@ process.veg("25-171.2.xls")
 process.veg("25-171.3.xls")
 process.veg("25-170.xls")
 process.veg("25-239.xls")
+process.veg("25-170.2-24-442.xls")
+process.veg("25-240.xls")
 
 # Not yet processed
 
@@ -112,5 +114,6 @@ report.veg("manifest_for_D082025032692651637-25-096.csv") # one reanalysis
 report.veg("manifest_for_D1120250428134140455-25-171.csv") # one reanalysis
 report.veg("manifest_for_D202025050190458499-25-170.csv")
 report.veg("manifest_for_D1020250923114720311-25-239.csv")
+report.veg("manifest_for_D092025099100036134-25-240.csv")
 
 # Not yet reported
