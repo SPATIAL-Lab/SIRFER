@@ -619,7 +619,7 @@ report.veg = function(fn, flagged = FALSE){
   # Rep numbers
   sids = unique(veg.out$internalLabID)
   for(i in sids){
-    sm = grep(i, veg.out$internalLabID)
+    sm = grep(paste0(i, "$"), veg.out$internalLabID)
     for(j in seq_along(sm)){
       veg.out$analyticalRepNumber[sm[j]] = j
     }
