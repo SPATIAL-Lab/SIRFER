@@ -379,29 +379,25 @@ QC = function(d){
   # Add QC flags back to d
   if(Npct_sd.flag[3] == "*" | Cpct_sd.flag[3] == "*"){
     d$cnPercentQF = rep(1)
-  }
-  else{
+  } else{
     d$cnPercentQF = rep(0)
   }
   
   if(d15N_sd.flag[3] == "*" | d13C_sd.flag[3] == "*"){
     d$cnIsotopeQF = rep(1)
-  }
-  else{
+  } else{
     d$cnIsotopeQF = rep(0)
   }
   
   if(Npct.flag[3] == "*" | Cpct.flag[3] == "*"){
     d$percentAccuracyQF = rep(1)
-  }
-  else{
+  } else{
     d$percentAccuracyQF = rep(0)
   }
   
   if(d15N.flag[3] == "*" | d13C.flag[3] == "*"){
     d$isotopeAccuracyQF = rep(1)
-  }
-  else{
+  } else{
     d$isotopeAccuracyQF = rep(0)
   }
   
@@ -419,8 +415,16 @@ QC = function(d){
   
   if(sum(d$yieldQF == 1) > 0){
     cat("C or N yield out of range\n")
-    cat(paste(d$Line[d$yieldQF == 1], 
-              d$Identifier1[d$yieldQF == 1], "\n", sep = "\t"), "\n")
+    for(i in 1:nrow(d)){
+      if(d$yieldQF[i] == 1){
+        cat(paste(d$Line[i], d$Identifier1[i], 
+                  paste0("N_area = ", d$AreaAllN[i], "; OK = ", 
+                         min(slrm$AreaAllN), ":", max(slrm$AreaAllN)),
+                  paste0("C_area = ", d$AreaAllC[i], "; OK = ", 
+                         min(slrm$AreaAllC), ":", max(slrm$AreaAllC)), 
+            sep = "\t"), "\n")
+      }
+    }
   }
   
   d$yieldQF[d$Amount * d$Npct < 0.015] = 2
