@@ -97,6 +97,11 @@ process.veg("26-058.2.xls")
 process.veg("26-058.3-059.1.xls")
 process.veg("26-059.2.xls")
 process.veg("26-059.3-26-019.3.xls")
+process.veg("26-090.xls")
+process.veg("26-091.xls")
+process.veg("26-092.xls")
+process.veg("26-093.1.xls")
+process.veg("26-093.2.xls")
 
 # Not yet processed
 
@@ -144,6 +149,10 @@ report.veg("manifest_for_D1420251106132826703-26-015.csv")
 report.veg("manifest_for_D1820251022103402196-26-016.csv")
 report.veg("manifest_for_D0420260105104425799-26-017.csv")
 report.veg("manifest_for_D0920260210162633150-26-058.csv")
+report.veg("manifest_for_D1420260406081016690-26-090.csv")
+report.veg("manifest_for_D0520260324092707058-26-091.csv")
+report.veg("manifest_for_D2020260313134118831-26-092.csv")
+report.veg("manifest_for_D0520260331074751991-26-093.csv")
 
 # Not yet reported
 report.veg("manifest_for_D2020251028134012628-26-019.csv") # one high C:N sample

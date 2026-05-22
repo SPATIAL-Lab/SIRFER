@@ -87,9 +87,9 @@ prepVeg = function(fn){
   
   # Identify missing peaks
   d.missing = d[0, ]
+  start.m = mean(d$StartN, na.rm = TRUE)
+  start.sd = sd(d$StartN, na.rm = TRUE)
   for(i in seq_along(d$Line)){
-    start.m = mean(d$StartN, na.rm = TRUE)
-    start.sd = sd(d$StartN, na.rm = TRUE)
     if(is.na(d$StartN[i]) | abs(d$StartN[i] - start.m) > 5 * start.sd){
       d.missing = rbind(d.missing, d[i, ])
     }
