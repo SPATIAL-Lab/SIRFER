@@ -90,7 +90,7 @@ prepVeg = function(fn){
   start.m = mean(d$StartN, na.rm = TRUE)
   start.sd = sd(d$StartN, na.rm = TRUE)
   for(i in seq_along(d$Line)){
-    if(is.na(d$StartN[i]) | abs(d$StartN[i] - start.m) > 5 * start.sd){
+    if(is.na(d$StartN[i]) | abs(d$StartN[i] - start.m) > 8 * start.sd){
       d.missing = rbind(d.missing, d[i, ])
     }
   }
