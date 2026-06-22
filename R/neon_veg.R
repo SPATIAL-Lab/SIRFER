@@ -102,6 +102,9 @@ process.veg("26-091.xls")
 process.veg("26-092.xls")
 process.veg("26-093.1.xls")
 process.veg("26-093.2.xls")
+process.veg("26-094.1.xls")
+process.veg("26-094.2.xls")
+process.veg("26-090-RERUN.xls")
 
 # Not yet processed
 
@@ -153,6 +156,7 @@ report.veg("manifest_for_D1420260406081016690-26-090.csv")
 report.veg("manifest_for_D0520260324092707058-26-091.csv")
 report.veg("manifest_for_D2020260313134118831-26-092.csv")
 report.veg("manifest_for_D0520260331074751991-26-093.csv")
+report.veg("manifest_for_D0520260331081231111-26-094.csv")
 
 # Not yet reported
 report.veg("manifest_for_D2020251028134012628-26-019.csv") # one high C:N sample
