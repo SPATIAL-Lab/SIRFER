@@ -136,8 +136,8 @@ corr.fit = function(d){
   drift.n2 = lm(d15N_14N ~ Line, plrm2)
   slope.n1 = summary(drift.n1)$coeff[2, 1]
   slope.n2 = summary(drift.n2)$coeff[2, 1]
-  if(summary(drift.n1)$adj.r.squared > 0.3 &
-     summary(drift.n2)$adj.r.squared > 0.3 &
+  if(summary(drift.n1)$r.squared > 0.3 &
+     summary(drift.n2)$r.squared > 0.3 &
      identical(sign(slope.n1), sign(slope.n2))){
     slope.n = mean(c(slope.n1, slope.n2))
     cat("Nitrogen drift slope of", round(slope.n, 4), "applied.\n")
@@ -164,8 +164,8 @@ corr.fit = function(d){
     drift.c2 = lm(d13C_12C ~ Line, plrm2)
     slope.c1 = summary(drift.c1)$coeff[2, 1]
     slope.c2 = summary(drift.c2)$coeff[2, 1]
-    if(summary(drift.c1)$adj.r.squared > 0.3 &
-       summary(drift.c2)$adj.r.squared > 0.3 &
+    if(summary(drift.c1)$r.squared > 0.3 &
+       summary(drift.c2)$r.squared > 0.3 &
        identical(sign(slope.c1), sign(slope.c2))){
       slope.c = mean(c(slope.c1, slope.c2))
       cat("Carbon drift slope of", round(slope.c, 4), "applied.\n")
