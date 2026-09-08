@@ -167,7 +167,7 @@ report.veg("manifest_for_D0520260331074751991-26-093.csv")
 report.veg("manifest_for_D0520260331081231111-26-094.csv")
 report.veg("manifest_for_D0220260421072410026-26-152.csv")
 report.veg("manifest_for_D1420260709112845987-26-204.csv")
+report.veg("manifest_for_D2020251028134012628-26-019.csv", TRUE) # one high C:N sample
+report.veg("manifest_for_D1020260126080618006-26-059.csv", TRUE) # one high C:N sample
 
 # Not yet reported
-report.veg("manifest_for_D2020251028134012628-26-019.csv", TRUE) # one high C:N sample
-report.veg("manifest_for_D1020260126080618006-059.csv", TRUE) # one high C:N sample
